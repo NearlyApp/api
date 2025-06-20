@@ -6,8 +6,6 @@ export class AppController {
     @Get("/health")
     @HttpCode(HttpStatus.OK)
     healthCheck(@Res() res: Response) {
-        res.send({
-            status: "ok"
-        });
+        res.send("OK");
     }
 }
