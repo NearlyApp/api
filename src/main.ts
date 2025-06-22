@@ -35,9 +35,10 @@ async function bootstrap() {
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
-        secure: configService.get('NODE_ENV') === 'production',
+        // secure: configService.get('NODE_ENV') === 'production',
+        secure: false, // For local development, set to false
         signed: true,
-        sameSite: 'none',
+        sameSite: 'lax',
         domain: '.nearly.teamzbl.com',
       },
     }),
