@@ -1,3 +1,4 @@
+import { AUTH_COOKIE_NAME } from '@modules/auth/auth.constants';
 import { SignInDto, SignUpDto } from '@modules/auth/auth.dtos';
 import {
   Body,
@@ -62,7 +63,7 @@ export class AuthController {
       req.session.destroy((error) => {
         if (error) throw error;
 
-        res.clearCookie('connect.sid');
+        res.clearCookie(AUTH_COOKIE_NAME);
         return res.send();
       });
     });

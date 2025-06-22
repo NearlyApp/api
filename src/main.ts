@@ -38,6 +38,7 @@ async function bootstrap() {
         secure: configService.get('NODE_ENV') === 'production',
         signed: true,
         sameSite: 'none',
+        domain: '.nearly.teamzbl.com',
       },
     }),
   );
