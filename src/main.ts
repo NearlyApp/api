@@ -2,6 +2,7 @@ import { setupSwagger } from '@/swagger';
 import { ConfigService } from '@config/config.service';
 import getRedisClient from '@lib/getRedisClient';
 import { AppModule } from '@modules/app.module';
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { RedisStore } from 'connect-redis';
 import session from 'express-session';
@@ -9,11 +10,20 @@ import passport from 'passport';
 
 const DEFAULT_PORT = 3000;
 
+const ALLOWED_DOMAINS = ['https://api.nearly.teamzbl.com/'];
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.useGlobalPipes(new ValidationPipe());
+
   const configService = app.get(ConfigService);
   const redisClient = await getRedisClient(configService.get('REDIS_URL')!);
+
+  app.enableCors({
+    origin: ALLOWED_DOMAINS,
+    credentials: true,
+  });
 
   app.use(
     session({
@@ -27,7 +37,7 @@ async function bootstrap() {
         httpOnly: true,
         secure: configService.get('NODE_ENV') === 'production',
         signed: true,
-        sameSite: 'lax',
+        sameSite: 'none',
       },
     }),
   );
