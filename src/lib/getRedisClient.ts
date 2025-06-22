@@ -1,13 +1,16 @@
-import Redis from "ioredis";
+import { createClient, RedisClientType } from 'redis';
 
-let client: Nullable<Redis> = null;
+let client: Nullable<RedisClientType> = null;
 let redisUrl: Nullable<string> = null;
 
-export default function getRedisClient(url: string): Redis {
-    if (!client || redisUrl !== url) {
-        if (client) client.disconnect();
-        client = new Redis(url);
-        redisUrl = url;
-    }
-    return client as Redis;
+export default async function getRedisClient(
+  url: string,
+): Promise<RedisClientType> {
+  if (!client || redisUrl !== url) {
+    if (client) await client.quit();
+    client = createClient({ url });
+    await client.connect();
+    redisUrl = url;
+  }
+  return client;
 }

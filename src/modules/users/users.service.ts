@@ -1,6 +1,10 @@
 import { UsersRepository } from '@modules/users/users.repository';
 import { BaseUser, User } from '@modules/users/users.types';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import bcrypt from 'bcrypt';
 import { validate as isUUID } from 'uuid';
 
@@ -19,6 +23,7 @@ export class UsersService {
     if (!user || !user.password || !bcrypt.compareSync(password, user.password))
       return null;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userData } = user;
 
     return userData as User;
@@ -41,6 +46,7 @@ export class UsersService {
         `User with identifier ${identifier} not found`,
       );
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userData } = user;
 
     return userData as User;
@@ -50,6 +56,7 @@ export class UsersService {
     const user = await this.usersRepository.findByUUID(uuid);
     if (!user) throw new NotFoundException(`User with UUID ${uuid} not found`);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userData } = user;
 
     return userData as User;
@@ -60,6 +67,7 @@ export class UsersService {
     if (!user)
       throw new NotFoundException(`User with email ${email} not found`);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userData } = user;
 
     return userData as User;
@@ -70,6 +78,7 @@ export class UsersService {
     if (!user)
       throw new NotFoundException(`User with username ${username} not found`);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userData } = user;
 
     return userData as User;
@@ -79,8 +88,38 @@ export class UsersService {
     const users = await this.usersRepository.findAll();
 
     return users.map((user) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password: _, ...userData } = user;
+
       return userData as User;
     }) as User[];
+  }
+
+  async createUser(
+    data: Omit<BaseUser, 'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt'>,
+  ) {
+    const existingUsers = await Promise.all([
+      this.usersRepository.findByEmail(data.email),
+      this.usersRepository.findByUsername(data.username),
+    ]);
+
+    if (existingUsers[0])
+      throw new ConflictException(`Email ${data.email} is already in use`);
+    if (existingUsers[1])
+      throw new ConflictException(
+        `Username ${data.username} is already in use`,
+      );
+
+    const hashedPassword = bcrypt.hashSync(data.password, 10);
+
+    const user = await this.usersRepository.create({
+      ...data,
+      password: hashedPassword,
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _, ...userData } = user;
+
+    return userData as User;
   }
 }

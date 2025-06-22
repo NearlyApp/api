@@ -13,7 +13,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
-  const redisClient = getRedisClient(configService.get('REDIS_URL')!);
+  const redisClient = await getRedisClient(configService.get('REDIS_URL')!);
 
   app.use(
     session({
@@ -40,4 +40,5 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? DEFAULT_PORT);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
 bootstrap();
