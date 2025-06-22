@@ -11,6 +11,8 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
+      "@config/*": ["src/modules/config/*"],
+      "@drizzle/*": ["src/modules/drizzle/*"],
       "@modules/*": ["src/modules/*"],
       "@/*": ["src/*"],
     },
