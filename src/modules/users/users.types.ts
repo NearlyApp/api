@@ -1,6 +1,5 @@
-import { usersSchema } from "@drizzle/schemas";
-import { InferSelectModel } from "drizzle-orm";
-
+import { usersSchema } from '@drizzle/schemas';
+import { InferSelectModel } from 'drizzle-orm';
 
 export type BaseUser = InferSelectModel<typeof usersSchema>;
 
