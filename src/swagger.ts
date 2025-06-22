@@ -5,5 +5,13 @@ export function setupSwagger(app: INestApplication): void {
   const options = new DocumentBuilder().setTitle('NearlyAPI').build();
 
   const documentFactory = SwaggerModule.createDocument(app, options);
-  SwaggerModule.setup('docs', app, documentFactory);
+  SwaggerModule.setup('docs', app, documentFactory, {
+    swaggerOptions: {
+      withCredentials: true,
+      requestInterceptor: (req) => {
+        req.withCredentials = true;
+        return req;
+      },
+    },
+  });
 }
