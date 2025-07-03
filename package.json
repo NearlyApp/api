@@ -21,7 +21,8 @@
     "drizzle:generate": "drizzle-kit generate --config=src/modules/drizzle/drizzle.config.ts",
     "drizzle:migrate": "drizzle-kit migrate --config=src/modules/drizzle/drizzle.config.ts",
     "drizzle:push": "drizzle-kit push --config=src/modules/drizzle/drizzle.config.ts",
-    "drizzle:studio": "drizzle-kit studio --config=src/modules/drizzle/drizzle.config.ts"
+    "drizzle:studio": "drizzle-kit studio --config=src/modules/drizzle/drizzle.config.ts",
+    "seed": "ts-node -r tsconfig-paths/register src/modules/drizzle/seeds/index.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -44,6 +45,7 @@
     "redis": "^5.5.6",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "ua-parser-js": "^2.0.4",
     "uuid": "^11.1.0",
     "zod": "^3.25.67"
   },
