@@ -1,5 +1,8 @@
 import { AUTH_COOKIE_NAME } from '@modules/auth/auth.constants';
-import { SignInDto, SignUpDto } from '@modules/auth/auth.dtos';
+import {
+  SignInBodyDto as SignInDto,
+  SignUpBodyDto as SignUpDto,
+} from '@modules/auth/auth.dtos';
 import {
   Body,
   Controller,
@@ -43,6 +46,7 @@ export class AuthController {
       username: body.username,
       displayName: null,
       email: body.email,
+      biography: null,
       password: body.password,
       avatarUrl: null,
     });

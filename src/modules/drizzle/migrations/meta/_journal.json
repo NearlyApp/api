@@ -8,6 +8,13 @@
       "when": 1750579511528,
       "tag": "0000_silly_quasar",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1751524740114,
+      "tag": "0001_premium_scorpion",
+      "breakpoints": true
     }
   ]
 }

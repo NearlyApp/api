@@ -4,13 +4,18 @@ import { BaseUser } from '@modules/users/users.types';
 import { Injectable } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
 
+type FindOptions = {
+  withRoles?: boolean;
+  includeDeleted?: boolean;
+};
+
 @Injectable()
 export class UsersRepository {
   constructor(private readonly drizzleService: DrizzleService) {}
 
   async findByUUID(
     uuid: string,
-    options: { includeDeleted?: boolean } = {},
+    options: FindOptions = {},
   ): Promise<Nullable<BaseUser>> {
     const { includeDeleted = false } = options;
 
@@ -25,12 +30,14 @@ export class UsersRepository {
       .where(whereClause)
       .limit(1);
 
-    return (result[0] as BaseUser) ?? null;
+    const user = (result[0] as BaseUser) ?? null;
+
+    return user;
   }
 
   async findByEmail(
     email: string,
-    options: { includeDeleted?: boolean } = {},
+    options: FindOptions = {},
   ): Promise<Nullable<BaseUser>> {
     const { includeDeleted = false } = options;
 
@@ -45,12 +52,14 @@ export class UsersRepository {
       .where(whereClause)
       .limit(1);
 
-    return (result[0] as BaseUser) ?? null;
+    const user = (result[0] as BaseUser) ?? null;
+
+    return user;
   }
 
   async findByUsername(
     username: string,
-    options: { includeDeleted?: boolean } = {},
+    options: FindOptions = {},
   ): Promise<Nullable<BaseUser>> {
     const { includeDeleted = false } = options;
 
@@ -65,12 +74,12 @@ export class UsersRepository {
       .where(whereClause)
       .limit(1);
 
-    return (result[0] as BaseUser) ?? null;
+    const user = (result[0] as BaseUser) ?? null;
+
+    return user;
   }
 
-  async findAll(
-    options: { includeDeleted?: boolean } = {},
-  ): Promise<BaseUser[]> {
+  async findAll(options: FindOptions = {}): Promise<BaseUser[]> {
     const { includeDeleted = false } = options;
 
     const whereClause = includeDeleted

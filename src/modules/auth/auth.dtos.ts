@@ -1,3 +1,8 @@
+import {
+  USERNAME_MAX_LENGTH,
+  USERNAME_MIN_LENGTH,
+  USERNAME_REGEX,
+} from '@drizzle/schemas/users.schema';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsBoolean,
@@ -11,7 +16,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class SignInDto {
+export class SignInBodyDto {
   @IsString()
   @IsNotEmpty()
   @ApiProperty({ name: 'login', type: String, required: true })
@@ -28,12 +33,16 @@ export class SignInDto {
   rememberMe?: boolean;
 }
 
-export class SignUpDto {
+export class SignUpBodyDto {
   @IsString()
   @IsNotEmpty()
-  @MinLength(3, { message: 'username should be at least 3 characters' })
-  @MaxLength(32, { message: 'username should be at most 32 characters' })
-  @Matches(/^[a-zA-Z0-9._\-']+$/, {
+  @MinLength(USERNAME_MIN_LENGTH, {
+    message: `username should be at least ${USERNAME_MIN_LENGTH} characters`,
+  })
+  @MaxLength(USERNAME_MAX_LENGTH, {
+    message: `username should be at most ${USERNAME_MAX_LENGTH} characters`,
+  })
+  @Matches(USERNAME_REGEX, {
     message:
       "username can only contain letters (a-z, A-Z), digits (0-9), and special characters (._-')",
   })
