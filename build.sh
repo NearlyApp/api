@@ -7,5 +7,3 @@ always-auth=true" > .npmrc
 npm install --include=dev
 
 npm run build
-
-npm run drizzle:migrate
