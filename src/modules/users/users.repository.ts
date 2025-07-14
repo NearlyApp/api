@@ -1,6 +1,6 @@
 import { DrizzleService } from '@drizzle/drizzle.service';
-import { usersSchema } from '@drizzle/schemas';
-import { BaseUser } from '@modules/users/users.types';
+import { BaseUser } from '@nearlyapp/common';
+import { usersSchema } from '@nearlyapp/common/schemas';
 import { Injectable } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
 

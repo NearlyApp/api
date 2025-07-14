@@ -1,5 +1,5 @@
 import { UsersRepository } from '@modules/users/users.repository';
-import { BaseUser, User } from '@modules/users/users.types';
+import { BaseUser, User } from '@nearlyapp/common';
 import {
   ConflictException,
   Injectable,

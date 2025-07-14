@@ -2,7 +2,7 @@ import {
   USERNAME_MAX_LENGTH,
   USERNAME_MIN_LENGTH,
   USERNAME_REGEX,
-} from '@drizzle/schemas/users.schema';
+} from '@nearlyapp/common/schemas/users';
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsBoolean,

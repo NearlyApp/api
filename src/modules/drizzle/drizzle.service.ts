@@ -1,8 +1,7 @@
 import { ConfigService } from '@config/config.service';
 import { DrizzleClient } from '@drizzle/drizzle.type';
-import * as schema from '@drizzle/schemas';
+import { getDrizzleClient, getDrizzlePool } from '@nearlyapp/common';
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
 @Injectable()
@@ -11,17 +10,8 @@ export class DrizzleService implements OnModuleDestroy {
   private readonly client: DrizzleClient;
 
   constructor(private readonly configService: ConfigService) {
-    this.pool = new Pool({
-      host: this.configService.get('PG_HOST'),
-      port: this.configService.get('PG_PORT'),
-      user: this.configService.get('PG_USER'),
-      password: this.configService.get('PG_PASSWORD'),
-      database: this.configService.get('DB_NAME'),
-      ssl: true,
-    });
-    this.client = drizzle(this.pool, {
-      schema,
-    });
+    this.pool = getDrizzlePool();
+    this.client = getDrizzleClient();
   }
 
   getClient() {

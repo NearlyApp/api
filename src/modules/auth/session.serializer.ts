@@ -1,7 +1,7 @@
+import { User } from '@nearlyapp/common';
 import { Injectable } from '@nestjs/common';
 import { PassportSerializer } from '@nestjs/passport';
 import { UsersService } from '@users/users.service';
-import { User } from '@users/users.types';
 
 @Injectable()
 export class SessionSerializer extends PassportSerializer {

@@ -1,5 +1,5 @@
 {
-  "name": "@nearly/api",
+  "name": "@nearlyapp/api",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -18,13 +18,11 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "drizzle:generate": "drizzle-kit generate --config=src/modules/drizzle/drizzle.config.ts",
-    "drizzle:migrate": "drizzle-kit migrate --config=src/modules/drizzle/drizzle.config.ts",
-    "drizzle:push": "drizzle-kit push --config=src/modules/drizzle/drizzle.config.ts",
-    "drizzle:studio": "drizzle-kit studio --config=src/modules/drizzle/drizzle.config.ts",
-    "seed": "ts-node -r tsconfig-paths/register src/modules/drizzle/seeds/index.ts"
+    "seed": "ts-node -r tsconfig-paths/register src/modules/drizzle/seeds/index.ts",
+    "common:up": "npm up @nearlyapp/common"
   },
   "dependencies": {
+    "@nearlyapp/common": "^2.0.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
