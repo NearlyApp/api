@@ -44,7 +44,7 @@ export abstract class BaseRepository<
     const { includeDeleted = false } = options;
 
     const conditions = this.buildConditions(where);
-    if (includeDeleted && this.schema['deletedAt'])
+    if (!includeDeleted && this.schema['deletedAt'])
       conditions.push(isNull(this.schema['deletedAt']));
 
     const query = this.db
