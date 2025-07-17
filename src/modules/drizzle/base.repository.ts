@@ -72,7 +72,7 @@ export abstract class BaseRepository<
       .select()
       .from(this.schema)
       .where(
-        includeDeleted && this.schema['deletedAt']
+        !includeDeleted && this.schema['deletedAt']
           ? eq(this.schema[field], value)
           : and(
               eq(this.schema[field], value),
