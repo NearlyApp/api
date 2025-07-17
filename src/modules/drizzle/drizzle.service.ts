@@ -1,4 +1,3 @@
-import { ConfigService } from '@config/config.service';
 import {
   DrizzleClient,
   getDrizzleClient,
@@ -12,7 +11,7 @@ export class DrizzleService implements OnModuleDestroy {
   private readonly pool: Pool;
   public readonly client: DrizzleClient;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor() {
     this.pool = getDrizzlePool();
     this.client = getDrizzleClient();
   }
