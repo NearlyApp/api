@@ -7,15 +7,11 @@ import { Pool } from 'pg';
 @Injectable()
 export class DrizzleService implements OnModuleDestroy {
   private readonly pool: Pool;
-  private readonly client: DrizzleClient;
+  public readonly client: DrizzleClient;
 
   constructor(private readonly configService: ConfigService) {
     this.pool = getDrizzlePool();
     this.client = getDrizzleClient();
-  }
-
-  getClient() {
-    return this.client;
   }
 
   async onModuleDestroy() {

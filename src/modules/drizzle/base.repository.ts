@@ -34,7 +34,7 @@ export abstract class BaseRepository<
   ) {}
 
   protected get db() {
-    return this.drizzleService.getClient();
+    return this.drizzleService.client;
   }
 
   protected buildConditions(
@@ -148,18 +148,51 @@ export abstract class BaseRepository<
   }
 
   async update(
-    where: Partial<TEntity>,
+    where: WhereClause<TEntity>,
     data: Omit<Partial<TEntity>, DataExcludedKeys>,
-  ): Promise<TEntity> {
+  ) {
     if (this.schema['updatedAt']) data.updatedAt = new Date();
+
+    const conditions = Object.entries(where).map(([key, value]) => {
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        ('toSQL' in value || 'getSQL' in value)
+      ) {
+        return value as SQL | SQLWrapper;
+      }
+      return eq(this.schema[key], value);
+    });
 
     const result = await this.db
       .update(this.schema)
       .set(data)
-      .where(eq(this.schema, where))
+      .where(and(...conditions))
       .returning();
 
-    return result[0] as TEntity;
+    return result;
+  }
+
+  async delete(
+    where: WhereClause<TEntity>,
+    options: { hardDelete?: boolean } = {},
+  ) {
+    const { hardDelete = false } = options;
+
+    const conditions = Object.entries(where).map(([key, value]) => {
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        ('toSQL' in value || 'getSQL' in value)
+      ) {
+        return value as SQL | SQLWrapper;
+      }
+      return eq(this.schema[key], value);
+    });
+
+    if (hardDelete || !this.schema['deletedAt'])
+      await this.db.delete(this.schema).where(and(...conditions));
+    else await this.update(where, { deletedAt: new Date() });
   }
 
   async count(

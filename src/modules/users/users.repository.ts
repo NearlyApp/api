@@ -2,7 +2,7 @@ import { BaseRepository, FindOptions } from '@drizzle/base.repository';
 import { DrizzleService } from '@drizzle/drizzle.service';
 import { usersSchema } from '@nearlyapp/common/schemas';
 import { Injectable } from '@nestjs/common';
-import { count, eq, isNull } from 'drizzle-orm';
+import { count, isNull } from 'drizzle-orm';
 
 @Injectable()
 export class UsersRepository extends BaseRepository<typeof usersSchema> {
@@ -22,26 +22,7 @@ export class UsersRepository extends BaseRepository<typeof usersSchema> {
     return this.findOne({ username }, options);
   }
 
-  async delete(
-    uuid: string,
-    options: { hardDelete?: boolean } = {},
-  ): Promise<void> {
-    const { hardDelete = false } = options;
-
-    const db = this.drizzleService.getClient();
-
-    if (hardDelete)
-      await db.delete(usersSchema).where(eq(usersSchema.uuid, uuid));
-    else
-      await db
-        .update(usersSchema)
-        .set({
-          deletedAt: new Date(),
-        })
-        .where(eq(usersSchema.uuid, uuid));
-  }
-
-  async count(options: FindOptions<true> = {}): Promise<number> {
+  async count(options: FindOptions<false> = {}): Promise<number> {
     const { offset, limit, includeDeleted = false } = options;
 
     const db = this.drizzleService.getClient();
