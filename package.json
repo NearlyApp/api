@@ -22,7 +22,7 @@
     "common:up": "npm up @nearlyapp/common"
   },
   "dependencies": {
-    "@nearlyapp/common": "^2.0.2",
+    "@nearlyapp/common": "^2.1.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",

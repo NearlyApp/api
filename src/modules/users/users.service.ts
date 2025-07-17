@@ -1,6 +1,6 @@
 import { PaginatedResult } from '@/types/pagination';
 import { UsersRepository } from '@modules/users/users.repository';
-import { BaseUser, User } from '@nearlyapp/common';
+import { BaseUser, CreateUserData, User } from '@nearlyapp/common';
 import {
   ConflictException,
   Injectable,
@@ -122,7 +122,7 @@ export class UsersService {
   }
 
   async createUser(
-    data: Omit<BaseUser, 'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt'>,
+    data: CreateUserData,
   ) {
     const existingUsers = await Promise.all([
       this.usersRepository.findByEmail(data.email),
