@@ -5,9 +5,11 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Query,
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
+import { GetUsersQueryDto } from '@users/users.dtos';
 import { Request } from 'express';
 
 @Controller('users')
@@ -32,7 +34,7 @@ export class UsersController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  async getUsers() {
-    return this.usersService.getUsers();
+  async getUsers(@Query() query: GetUsersQueryDto) {
+    return this.usersService.getUsers(query);
   }
 }

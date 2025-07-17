@@ -1,3 +1,4 @@
+import { PaginatedResult } from '@/types/pagination';
 import { UsersRepository } from '@modules/users/users.repository';
 import { BaseUser, User } from '@nearlyapp/common';
 import {
@@ -5,8 +6,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { GetUsersQueryDto } from '@users/users.dtos';
 import bcrypt from 'bcrypt';
 import { validate as isUUID } from 'uuid';
+
+export const MAX_USERS_PER_PAGE = 1000;
 
 @Injectable()
 export class UsersService {
@@ -84,15 +88,37 @@ export class UsersService {
     return userData as User;
   }
 
-  async getUsers(): Promise<User[]> {
-    const users = await this.usersRepository.findAll();
+  async getUsers(
+    query: GetUsersQueryDto,
+  ): Promise<PaginatedResult<User, 'users'>> {
+    const offset = query.page ? query.page - 1 : 0;
+    const limit = Math.min(
+      query.limit ?? MAX_USERS_PER_PAGE,
+      MAX_USERS_PER_PAGE,
+    );
 
-    return users.map((user) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { password: _, ...userData } = user;
+    const [users, count] = await Promise.all([
+      this.usersRepository.findMany({
+        offset,
+        limit,
+      }),
+      this.usersRepository.count({ offset, limit }),
+    ]);
 
-      return userData as User;
-    }) as User[];
+    return {
+      users: users.map((user) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { password: _, ...userData } = user;
+
+        return userData as User;
+      }) as User[],
+      pagination: {
+        page: query.page ?? 1,
+        limit,
+        totalItems: count,
+        totalPages: Math.ceil(count / limit),
+      },
+    };
   }
 
   async createUser(

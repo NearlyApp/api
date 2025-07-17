@@ -1,131 +1,25 @@
+import { BaseRepository, FindOptions } from '@drizzle/base.repository';
 import { DrizzleService } from '@drizzle/drizzle.service';
-import { BaseUser } from '@nearlyapp/common';
 import { usersSchema } from '@nearlyapp/common/schemas';
 import { Injectable } from '@nestjs/common';
-import { and, eq, isNull } from 'drizzle-orm';
-
-type FindOptions = {
-  withRoles?: boolean;
-  includeDeleted?: boolean;
-};
+import { count, eq, isNull } from 'drizzle-orm';
 
 @Injectable()
-export class UsersRepository {
-  constructor(private readonly drizzleService: DrizzleService) {}
-
-  async findByUUID(
-    uuid: string,
-    options: FindOptions = {},
-  ): Promise<Nullable<BaseUser>> {
-    const { includeDeleted = false } = options;
-
-    const whereClause = includeDeleted
-      ? eq(usersSchema.uuid, uuid)
-      : and(eq(usersSchema.uuid, uuid), isNull(usersSchema.deletedAt));
-
-    const db = this.drizzleService.getClient();
-    const result = await db
-      .select()
-      .from(usersSchema)
-      .where(whereClause)
-      .limit(1);
-
-    const user = (result[0] as BaseUser) ?? null;
-
-    return user;
+export class UsersRepository extends BaseRepository<typeof usersSchema> {
+  constructor(protected readonly drizzleService: DrizzleService) {
+    super(drizzleService, usersSchema);
   }
 
-  async findByEmail(
-    email: string,
-    options: FindOptions = {},
-  ): Promise<Nullable<BaseUser>> {
-    const { includeDeleted = false } = options;
-
-    const whereClause = includeDeleted
-      ? eq(usersSchema.email, email)
-      : and(eq(usersSchema.email, email), isNull(usersSchema.deletedAt));
-
-    const db = this.drizzleService.getClient();
-    const result = await db
-      .select()
-      .from(usersSchema)
-      .where(whereClause)
-      .limit(1);
-
-    const user = (result[0] as BaseUser) ?? null;
-
-    return user;
+  async findByUUID(uuid: string, options?: FindOptions) {
+    return this.findOne({ uuid }, options);
   }
 
-  async findByUsername(
-    username: string,
-    options: FindOptions = {},
-  ): Promise<Nullable<BaseUser>> {
-    const { includeDeleted = false } = options;
-
-    const whereClause = includeDeleted
-      ? eq(usersSchema.username, username)
-      : and(eq(usersSchema.username, username), isNull(usersSchema.deletedAt));
-
-    const db = this.drizzleService.getClient();
-    const result = await db
-      .select()
-      .from(usersSchema)
-      .where(whereClause)
-      .limit(1);
-
-    const user = (result[0] as BaseUser) ?? null;
-
-    return user;
+  async findByEmail(email: string, options?: FindOptions) {
+    return this.findOne({ email }, options);
   }
 
-  async findAll(options: FindOptions = {}): Promise<BaseUser[]> {
-    const { includeDeleted = false } = options;
-
-    const whereClause = includeDeleted
-      ? undefined
-      : isNull(usersSchema.deletedAt);
-
-    const db = this.drizzleService.getClient();
-    const result = await db.select().from(usersSchema).where(whereClause);
-
-    return result as BaseUser[];
-  }
-
-  async create(
-    data: Omit<BaseUser, 'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt'>,
-  ): Promise<BaseUser> {
-    const db = this.drizzleService.getClient();
-    const result = await db
-      .insert(usersSchema)
-      .values({
-        ...data,
-        uuid: crypto.randomUUID(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .returning();
-
-    return result[0] as BaseUser;
-  }
-
-  async update(
-    uuid: string,
-    data: Partial<
-      Omit<BaseUser, 'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt'>
-    >,
-  ): Promise<BaseUser> {
-    const db = this.drizzleService.getClient();
-    const result = await db
-      .update(usersSchema)
-      .set({
-        ...data,
-        updatedAt: new Date(),
-      })
-      .where(eq(usersSchema.uuid, uuid))
-      .returning();
-
-    return result[0] as BaseUser;
+  async findByUsername(username: string, options?: FindOptions) {
+    return this.findOne({ username }, options);
   }
 
   async delete(
@@ -145,5 +39,18 @@ export class UsersRepository {
           deletedAt: new Date(),
         })
         .where(eq(usersSchema.uuid, uuid));
+  }
+
+  async count(options: FindOptions<true> = {}): Promise<number> {
+    const { offset, limit, includeDeleted = false } = options;
+
+    const db = this.drizzleService.getClient();
+    let query = db.select({ count: count() }).from(usersSchema).$dynamic();
+
+    if (!includeDeleted) query = query.where(isNull(usersSchema.deletedAt));
+
+    const result = await this.withPagination(query, offset, limit);
+
+    return Number(result[0]?.count ?? 0);
   }
 }
