@@ -102,7 +102,7 @@ export class UsersService {
         offset,
         limit,
       }),
-      this.usersRepository.count({ offset, limit }),
+      this.usersRepository.count(),
     ]);
 
     return {

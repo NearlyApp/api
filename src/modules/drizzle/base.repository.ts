@@ -37,46 +37,13 @@ export abstract class BaseRepository<
     return this.drizzleService.client;
   }
 
-  protected buildConditions(
-    where: Nullable<WhereClause<TEntity>>,
-    includeDeleted: boolean,
-  ) {
-    const conditions = [];
-    if (where)
-      conditions.push(
-        ...Object.entries(where).map(([key, value]) => {
-          if (
-            typeof value === 'object' &&
-            value !== null &&
-            ('toSQL' in value || 'getSQL' in value)
-          ) {
-            return value as SQL | SQLWrapper;
-          }
-          return eq(this.schema[key], value);
-        }),
-      );
-    if (includeDeleted && this.schema['deletedAt'])
-      conditions.push(isNull(this.schema['deletedAt']));
-    return conditions;
-  }
-
   async findOne(
     where: WhereClause<TEntity>,
     options: FindOptions = {},
   ): Promise<Nullable<TEntity>> {
     const { includeDeleted = false } = options;
 
-    const conditions = Object.entries(where).map(([key, value]) => {
-      if (
-        typeof value === 'object' &&
-        value !== null &&
-        ('toSQL' in value || 'getSQL' in value)
-      ) {
-        return value as SQL | SQLWrapper;
-      }
-      return eq(this.schema[key], value);
-    });
-
+    const conditions = this.buildConditions(where);
     if (includeDeleted && this.schema['deletedAt'])
       conditions.push(isNull(this.schema['deletedAt']));
 
@@ -120,7 +87,7 @@ export abstract class BaseRepository<
   }
 
   async findMany(
-    where: Nullable<WhereClause<TEntity>>,
+    where?: Nullable<WhereClause<TEntity>>,
     options: FindOptions<true> = {},
   ): Promise<TEntity[]> {
     const { offset, limit, includeDeleted = false } = options;
@@ -153,21 +120,10 @@ export abstract class BaseRepository<
   ) {
     if (this.schema['updatedAt']) data.updatedAt = new Date();
 
-    const conditions = Object.entries(where).map(([key, value]) => {
-      if (
-        typeof value === 'object' &&
-        value !== null &&
-        ('toSQL' in value || 'getSQL' in value)
-      ) {
-        return value as SQL | SQLWrapper;
-      }
-      return eq(this.schema[key], value);
-    });
-
     const result = await this.db
       .update(this.schema)
       .set(data)
-      .where(and(...conditions))
+      .where(and(this.buildConditions(where)))
       .returning();
 
     return result;
@@ -179,19 +135,8 @@ export abstract class BaseRepository<
   ) {
     const { hardDelete = false } = options;
 
-    const conditions = Object.entries(where).map(([key, value]) => {
-      if (
-        typeof value === 'object' &&
-        value !== null &&
-        ('toSQL' in value || 'getSQL' in value)
-      ) {
-        return value as SQL | SQLWrapper;
-      }
-      return eq(this.schema[key], value);
-    });
-
     if (hardDelete || !this.schema['deletedAt'])
-      await this.db.delete(this.schema).where(and(...conditions));
+      await this.db.delete(this.schema).where(and(this.buildConditions(where)));
     else await this.update(where, { deletedAt: new Date() });
   }
 
@@ -199,14 +144,17 @@ export abstract class BaseRepository<
     where?: Nullable<WhereClause<TEntity>> = null,
     options: FindOptions<false> = {},
   ): Promise<number> {
-    const { offset, limit, includeDeleted = false } = options;
+    const { includeDeleted = false } = options;
     const query = this.db
       .select({ count: this.count() })
       .from(this.schema)
       .$dynamic();
 
-    const conditions = this.buildConditions(where, includeDeleted);
-    return query.where(and(...conditions)).count ?? 0;
+    const conditions = this.buildConditions(where);
+    if (!includeDeleted && this.schema['deletedAt'])
+      conditions.push(isNull(this.schema['deletedAt']));
+
+    return ((await query.where(and(...conditions))).count as number) ?? 0;
   }
 
   protected withPagination<T extends PgSelect>(
@@ -219,5 +167,23 @@ export abstract class BaseRepository<
     if (limit && limit > 0) query = query.limit(limit);
 
     return query;
+  }
+
+  protected buildConditions(where: Nullable<WhereClause<TEntity>>) {
+    const conditions = [];
+    if (where)
+      conditions.push(
+        ...Object.entries(where).map(([key, value]) => {
+          if (
+            typeof value === 'object' &&
+            value !== null &&
+            ('toSQL' in value || 'getSQL' in value)
+          ) {
+            return value as SQL | SQLWrapper;
+          }
+          return eq(this.schema[key], value);
+        }),
+      );
+    return conditions;
   }
 }
