@@ -37,6 +37,29 @@ export abstract class BaseRepository<
     return this.drizzleService.getClient();
   }
 
+  protected buildConditions(
+    where: Nullable<WhereClause<TEntity>>,
+    includeDeleted: boolean,
+  ) {
+    const conditions = [];
+    if (where)
+      conditions.push(
+        ...Object.entries(where).map(([key, value]) => {
+          if (
+            typeof value === 'object' &&
+            value !== null &&
+            ('toSQL' in value || 'getSQL' in value)
+          ) {
+            return value as SQL | SQLWrapper;
+          }
+          return eq(this.schema[key], value);
+        }),
+      );
+    if (includeDeleted && this.schema['deletedAt'])
+      conditions.push(isNull(this.schema['deletedAt']));
+    return conditions;
+  }
+
   async findOne(
     where: WhereClause<TEntity>,
     options: FindOptions = {},
@@ -104,24 +127,7 @@ export abstract class BaseRepository<
 
     let query = this.db.select().from(this.schema).$dynamic();
 
-    const conditions = [];
-    if (where)
-      conditions.push(
-        ...Object.entries(where).map(([key, value]) => {
-          if (
-            typeof value === 'object' &&
-            value !== null &&
-            ('toSQL' in value || 'getSQL' in value)
-          ) {
-            return value as SQL | SQLWrapper;
-          }
-          return eq(this.schema[key], value);
-        }),
-      );
-
-    if (includeDeleted && this.schema['deletedAt'])
-      conditions.push(isNull(this.schema['deletedAt']));
-
+    const conditions = this.buildConditions(where, includeDeleted);
     query = query.where(and(...conditions));
 
     const result = await this.withPagination(query, offset, limit);
@@ -154,6 +160,20 @@ export abstract class BaseRepository<
       .returning();
 
     return result[0] as TEntity;
+  }
+
+  async count(
+    where?: Nullable<WhereClause<TEntity>> = null,
+    options: FindOptions<false> = {},
+  ): Promise<number> {
+    const { offset, limit, includeDeleted = false } = options;
+    const query = this.db
+      .select({ count: this.count() })
+      .from(this.schema)
+      .$dynamic();
+
+    const conditions = this.buildConditions(where, includeDeleted);
+    return query.where(and(...conditions)).count ?? 0;
   }
 
   protected withPagination<T extends PgSelect>(
