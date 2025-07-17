@@ -2,7 +2,6 @@ import { ConfigService } from '@config/config.service';
 import { DrizzleClient } from '@drizzle/drizzle.type';
 import { getDrizzleClient, getDrizzlePool } from '@nearlyapp/common';
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
-import { PgSelect } from 'drizzle-orm/pg-core';
 import { Pool } from 'pg';
 
 @Injectable()

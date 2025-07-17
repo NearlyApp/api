@@ -1,8 +1,20 @@
 // @ts-nocheck
 
 import { DrizzleService } from '@drizzle/drizzle.service';
-import { and, eq, InferSelectModel, isNull } from 'drizzle-orm';
+import {
+  and,
+  eq,
+  InferSelectModel,
+  isNull,
+  SQL,
+  SQLWrapper,
+} from 'drizzle-orm';
 import { PgTable } from 'drizzle-orm/pg-core';
+
+type WhereValue<T> = T | SQL | SQLWrapper;
+type WhereClause<TEntity> = Partial<{
+  [K in keyof TEntity]: WhereValue<TEntity[K]>;
+}>;
 
 export type FindOptions<
   WithPagination extends boolean = false,
@@ -26,19 +38,29 @@ export abstract class BaseRepository<
   }
 
   async findOne(
-    where: Partial<TEntity>,
+    where: WhereClause<TEntity>,
     options: FindOptions = {},
   ): Promise<Nullable<TEntity>> {
     const { includeDeleted = false } = options;
 
+    const conditions = Object.entries(where).map(([key, value]) => {
+      if (
+        typeof value === 'object' &&
+        value !== null &&
+        ('toSQL' in value || 'getSQL' in value)
+      ) {
+        return value as SQL | SQLWrapper;
+      }
+      return eq(this.schema[key], value);
+    });
+
+    if (includeDeleted && this.schema['deletedAt'])
+      conditions.push(isNull(this.schema['deletedAt']));
+
     const query = this.db
       .select()
       .from(this.schema)
-      .where(
-        includeDeleted && this.schema['deletedAt']
-          ? eq(this.schema, where)
-          : and(eq(this.schema, where), isNull(this.schema['deletedAt'])),
-      )
+      .where(and(...conditions))
       .limit(1);
 
     const result = await query;
@@ -74,13 +96,33 @@ export abstract class BaseRepository<
     return (result[0] as TEntity) ?? null;
   }
 
-  async findMany(options: FindOptions<true> = {}): Promise<TEntity[]> {
+  async findMany(
+    where: Nullable<WhereClause<TEntity>>,
+    options: FindOptions<true> = {},
+  ): Promise<TEntity[]> {
     const { offset, limit, includeDeleted = false } = options;
 
     let query = this.db.select().from(this.schema).$dynamic();
 
-    if (!includeDeleted && this.schema['deletedAt'])
-      query = query.where(isNull(this.schema['deletedAt']));
+    const conditions = [];
+    if (where)
+      conditions.push(
+        ...Object.entries(where).map(([key, value]) => {
+          if (
+            typeof value === 'object' &&
+            value !== null &&
+            ('toSQL' in value || 'getSQL' in value)
+          ) {
+            return value as SQL | SQLWrapper;
+          }
+          return eq(this.schema[key], value);
+        }),
+      );
+
+    if (includeDeleted && this.schema['deletedAt'])
+      conditions.push(isNull(this.schema['deletedAt']));
+
+    query = query.where(and(...conditions));
 
     const result = await this.withPagination(query, offset, limit);
 

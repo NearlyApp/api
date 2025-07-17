@@ -1,8 +1,8 @@
-import { AUTH_COOKIE_NAME } from '@modules/auth/auth.constants';
+import { AUTH_COOKIE_NAME } from '@auth/auth.constants';
 import {
   SignInBodyDto as SignInDto,
   SignUpBodyDto as SignUpDto,
-} from '@modules/auth/auth.dtos';
+} from '@auth/auth.dtos';
 import {
   Body,
   Controller,
