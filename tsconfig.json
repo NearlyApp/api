@@ -14,6 +14,8 @@
     "baseUrl": "./",
     "paths": {
       "@lib/*": ["src/lib/*"],
+      "@middlewares/*": ["src/middlewares/*"],
+      "@auth/*": ["src/modules/auth/*"],
       "@config/*": ["src/modules/config/*"],
       "@drizzle/*": ["src/modules/drizzle/*"],
       "@users/*": ["src/modules/users/*"],
