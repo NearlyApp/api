@@ -1,10 +1,9 @@
-import cookieToSessionHeaderMiddleware from '@/middlewares/cookieToSessionHeader.middleware';
-import sessionHeaderToCookieMiddleware from '@/middlewares/sessionHeaderToCookie.middleware';
+import { LoggingInterceptor } from '@/interceptors/logging.interceptor';
+import ValidatorPipe from '@/pipes/validator.pipe';
 import { setupSwagger } from '@/swagger';
 import { ConfigService } from '@config/config.service';
 import getRedisClient from '@lib/getRedisClient';
 import { AppModule } from '@modules/app.module';
-import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { RedisStore } from 'connect-redis';
 import session from 'express-session';
@@ -15,12 +14,13 @@ const DEFAULT_PORT = 3000;
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+  app.useGlobalPipes(new ValidatorPipe());
+  app.useGlobalInterceptors(new LoggingInterceptor());
 
   const configService = app.get(ConfigService);
   const redisClient = await getRedisClient(configService.get('REDIS_URL')!);
 
-  app.use(sessionHeaderToCookieMiddleware);
+  // app.use(sessionHeaderToCookieMiddleware);
   app.use(
     session({
       store: new RedisStore({
@@ -40,11 +40,13 @@ async function bootstrap() {
   );
   app.use(passport.initialize());
   app.use(passport.session());
-  app.use(cookieToSessionHeaderMiddleware);
+  // app.use(cookieToSessionHeaderMiddleware);
 
   setupSwagger(app);
 
-  await app.listen(process.env.PORT ?? DEFAULT_PORT);
+  const port = process.env.PORT ?? DEFAULT_PORT;
+  if (configService.get('NODE_ENV') === 'production') await app.listen(port);
+  else await app.listen(port, '0.0.0.0'); // Allows to connect from other devices on the same network
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises

@@ -20,6 +20,7 @@
       "@drizzle/*": ["src/modules/drizzle/*"],
       "@users/*": ["src/modules/users/*"],
       "@modules/*": ["src/modules/*"],
+      "@custom-types/*": ["src/types/*"],
       "@/*": ["src/*"]
     },
     "incremental": true,
