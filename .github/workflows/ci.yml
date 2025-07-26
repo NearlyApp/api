@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: 🔄 Checkout repository
+        uses: actions/checkout@v4
+
       - name: ⚙️ Set up Node.js
         uses: ./.github/actions/node-setup
 
@@ -26,6 +29,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
     steps:
+      - name: 🔄 Checkout repository
+        uses: actions/checkout@v4
+
       - name: ⚙️ Set up Node.js
         uses: ./.github/actions/node-setup
 
