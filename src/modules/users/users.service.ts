@@ -1,15 +1,19 @@
 import { PaginatedResult } from '@/types/pagination';
 import { UsersRepository } from '@modules/users/users.repository';
-import { BaseUser, CreateUserData, User } from '@nearlyapp/common';
+import { BaseUser, User } from '@nearlyapp/common';
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { BANNED_USERNAMES } from '@users/users.constants';
 import { GetUsersQueryDto } from '@users/users.dtos';
 import bcrypt from 'bcrypt';
-import { validate as isUUID } from 'uuid';
+import { Request } from 'express';
 
+const SALT_ROUNDS = 10;
 export const MAX_USERS_PER_PAGE = 1000;
 
 @Injectable()
@@ -26,29 +30,6 @@ export class UsersService {
 
     if (!user || !user.password || !bcrypt.compareSync(password, user.password))
       return null;
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userData } = user;
-
-    return userData as User;
-  }
-
-  async getUser(identifier: string): Promise<User> {
-    let user: Nullable<BaseUser> = null;
-    if (isUUID(identifier))
-      user = await this.usersRepository.findByUUID(identifier);
-    else
-      user = (
-        await Promise.all([
-          this.usersRepository.findByEmail(identifier),
-          this.usersRepository.findByUsername(identifier),
-        ])
-      ).filter(Boolean)[0];
-
-    if (!user)
-      throw new NotFoundException(
-        `User with identifier ${identifier} not found`,
-      );
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userData } = user;
@@ -88,6 +69,14 @@ export class UsersService {
     return userData as User;
   }
 
+  async getMe(request: Request): Promise<User> {
+    const user = request.user ? this.getUserByUUID(request.user.uuid) : null;
+
+    if (!user) throw new UnauthorizedException('You are not authenticated');
+
+    return user;
+  }
+
   async getUsers(
     query: GetUsersQueryDto,
   ): Promise<PaginatedResult<User, 'users'>> {
@@ -122,8 +111,13 @@ export class UsersService {
   }
 
   async createUser(
-    data: CreateUserData,
+    data: Omit<BaseUser, 'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt'>,
   ) {
+    if (BANNED_USERNAMES.includes(data.username))
+      throw new BadRequestException(
+        `Username "${data.username}" is not allowed`,
+      );
+
     const existingUsers = await Promise.all([
       this.usersRepository.findByEmail(data.email),
       this.usersRepository.findByUsername(data.username),
@@ -136,7 +130,7 @@ export class UsersService {
         `Username ${data.username} is already in use`,
       );
 
-    const hashedPassword = bcrypt.hashSync(data.password, 10);
+    const hashedPassword = bcrypt.hashSync(data.password, SALT_ROUNDS);
 
     const user = await this.usersRepository.create({
       ...data,

@@ -1,7 +1,8 @@
-import { LoggingInterceptor } from '@/interceptors/logging.interceptor';
 import ValidatorPipe from '@/pipes/validator.pipe';
 import { setupSwagger } from '@/swagger';
+import { AUTH_COOKIE_NAME } from '@auth/auth.constants';
 import { ConfigService } from '@config/config.service';
+import { LoggingInterceptor } from '@interceptors/logging.interceptor';
 import getRedisClient from '@lib/getRedisClient';
 import { AppModule } from '@modules/app.module';
 import { NestFactory } from '@nestjs/core';
@@ -23,6 +24,7 @@ async function bootstrap() {
   // app.use(sessionHeaderToCookieMiddleware);
   app.use(
     session({
+      name: AUTH_COOKIE_NAME,
       store: new RedisStore({
         client: redisClient,
       }),

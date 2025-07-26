@@ -18,10 +18,10 @@ type WhereClause<TEntity> = Partial<{
 }>;
 
 export type FindOptions<
-  WithPagination extends boolean = false,
+  withPagination extends boolean = false,
   Extra extends object = object,
 > = { includeDeleted?: boolean } & Extra &
-  (WithPagination extends true ? { offset?: number; limit?: number } : object);
+  (withPagination extends true ? { offset?: number; limit?: number } : object);
 
 type DataExcludedKeys = 'id' | 'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt';
 

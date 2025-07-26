@@ -1,3 +1,4 @@
+import { User } from '@nearlyapp/common';
 import {
   CallHandler,
   ExecutionContext,
@@ -5,8 +6,13 @@ import {
   Logger,
   NestInterceptor,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { catchError, Observable, tap, throwError } from 'rxjs';
+
+interface HttpError extends Error {
+  status?: number;
+  getStatus?(): number;
+}
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
@@ -17,21 +23,26 @@ export class LoggingInterceptor implements NestInterceptor {
     next: CallHandler<any>,
   ): Observable<any> | Promise<Observable<any>> {
     const request: Request = context.switchToHttp().getRequest();
-    const response: Response = context.switchToHttp().getResponse();
     const start = Date.now();
 
     return next.handle().pipe(
       tap(() => {
         const duration = Date.now() - start;
+        const user: Nullable<User> = request.user;
+
         this.logger.log(
-          `${request.method} ${request.originalUrl} ${duration}ms`,
+          `${request.method} ${request.originalUrl} ${duration}ms - requested by ${user?.email || 'ANONYMOUS'}`,
         );
       }),
-      catchError((error) => {
+      catchError((error: HttpError) => {
         const duration = Date.now() - start;
+        const user: Nullable<User> = request.user;
+        const status = error.getStatus?.() || error.status || 500;
+
         this.logger.error(
-          `${request.method} ${request.originalUrl} ${duration}ms`,
+          `${request.method} ${request.originalUrl} ${duration}ms - ${status} - requested by ${user?.email || 'ANONYMOUS'}`,
         );
+        if (status >= 500) this.logger.error(error);
         return throwError(() => error);
       }),
     );
