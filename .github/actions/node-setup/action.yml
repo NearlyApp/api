@@ -1,0 +1,23 @@
+name: 'Common Node.js Setup'
+input:
+  node-version:
+    required: false
+    default: '22'
+runs:
+  using: 'composite'
+  steps:
+    - name: 🔄 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: ⚙️ Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+        registry-url: 'https://npm.pkg.github.com'
+        scope: '@nearlyapp'
+
+    - name: 📦 Install dependencies
+      run: npm ci
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
