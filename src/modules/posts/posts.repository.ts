@@ -15,10 +15,10 @@ export class PostsRepository extends BaseRepository<typeof postsSchema> {
 
   async findByLocation(lat: number, lng: number, options?: FindOptions) {
     // TODO: Implement location-based search logic
-    return this.findOne({ lat, lng }, options);
+    return this.findMany({ lat, lng }, options);
   }
 
-  async findByAuthorUuid(authorUuid: string, options?: FindOptions) {
-    return this.findOne({ authorUuid }, options);
+  async findByAuthorUUID(authorUuid: string, options?: FindOptions) {
+    return this.findMany({ authorUuid }, options);
   }
 }

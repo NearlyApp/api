@@ -186,4 +186,17 @@ export abstract class BaseRepository<
       );
     return conditions;
   }
+
+  getPaginationParams(
+    query: { page?: number; limit?: number },
+    maxDataPerPage: number,
+  ): {
+    limit: number;
+    offset: number;
+  } {
+    const limit = Math.min(query.limit ?? maxDataPerPage, maxDataPerPage);
+    const offset = query.page ? (query.page - 1) * limit : 0;
+
+    return { limit, offset };
+  }
 }

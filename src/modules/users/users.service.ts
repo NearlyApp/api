@@ -91,11 +91,10 @@ export class UsersService {
   async getUsers(
     query: GetUsersQueryDto,
   ): Promise<PaginatedResult<User, 'users'>> {
-    const limit = Math.min(
-      query.limit ?? MAX_USERS_PER_PAGE,
+    const { limit, offset } = this.usersRepository.getPaginationParams(
+      query,
       MAX_USERS_PER_PAGE,
     );
-    const offset = query.page ? (query.page - 1) * limit : 0;
 
     const [users, count] = await Promise.all([
       this.usersRepository.findMany(null, {
