@@ -7,7 +7,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { BANNED_USERNAMES } from '@users/users.contants';
+import { BANNED_USERNAMES } from '@users/users.constants';
 import { GetUsersQueryDto } from '@users/users.dtos';
 import bcrypt from 'bcrypt';
 
