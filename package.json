@@ -1,5 +1,6 @@
 {
   "name": "@nearlyapp/api",
+  "displayName": "Nearly API",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -20,11 +21,11 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed": "ts-node -r tsconfig-paths/register src/modules/drizzle/seeds/index.ts",
-    "common:up": "npm up @nearlyapp/common",
+    "common:up": "npm install @nearlyapp/common@latest",
     "prepare": "husky"
   },
   "dependencies": {
-    "@nearlyapp/common": "^2.1.2",
+    "@nearlyapp/common": "^2.2.2",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",

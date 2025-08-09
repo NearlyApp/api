@@ -1,14 +1,15 @@
-import { PaginatedResult } from '@/types/pagination';
+import type { PaginatedResult } from '@/types/pagination';
 import { UsersRepository } from '@modules/users/users.repository';
-import { BaseUser, CreateUserData, User } from '@nearlyapp/common';
+import { BaseUser, User } from '@nearlyapp/common';
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { BANNED_USERNAMES } from '@users/users.contants';
 import { GetUsersQueryDto } from '@users/users.dtos';
 import bcrypt from 'bcrypt';
-import { validate as isUUID } from 'uuid';
 
 export const MAX_USERS_PER_PAGE = 1000;
 
@@ -27,43 +28,14 @@ export class UsersService {
     if (!user || !user.password || !bcrypt.compareSync(password, user.password))
       return null;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userData } = user;
-
-    return userData as User;
-  }
-
-  async getUser(identifier: string): Promise<User> {
-    let user: Nullable<BaseUser> = null;
-    if (isUUID(identifier))
-      user = await this.usersRepository.findByUUID(identifier);
-    else
-      user = (
-        await Promise.all([
-          this.usersRepository.findByEmail(identifier),
-          this.usersRepository.findByUsername(identifier),
-        ])
-      ).filter(Boolean)[0];
-
-    if (!user)
-      throw new NotFoundException(
-        `User with identifier ${identifier} not found`,
-      );
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userData } = user;
-
-    return userData as User;
+    return this.formatUser(user);
   }
 
   async getUserByUUID(uuid: string): Promise<User> {
     const user = await this.usersRepository.findByUUID(uuid);
     if (!user) throw new NotFoundException(`User with UUID ${uuid} not found`);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userData } = user;
-
-    return userData as User;
+    return this.formatUser(user);
   }
 
   async getUserByEmail(email: string): Promise<User> {
@@ -71,10 +43,7 @@ export class UsersService {
     if (!user)
       throw new NotFoundException(`User with email ${email} not found`);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userData } = user;
-
-    return userData as User;
+    return this.formatUser(user);
   }
 
   async getUserByUsername(username: string): Promise<User> {
@@ -82,10 +51,7 @@ export class UsersService {
     if (!user)
       throw new NotFoundException(`User with username ${username} not found`);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userData } = user;
-
-    return userData as User;
+    return this.formatUser(user);
   }
 
   async getUsers(
@@ -106,12 +72,7 @@ export class UsersService {
     ]);
 
     return {
-      users: users.map((user) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { password: _, ...userData } = user;
-
-        return userData as User;
-      }) as User[],
+      users: users.map((user) => this.formatUser(user)),
       pagination: {
         page: query.page ?? 1,
         limit,
@@ -122,19 +83,41 @@ export class UsersService {
   }
 
   async createUser(
-    data: CreateUserData,
-  ) {
+    data: Omit<BaseUser, 'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt'>,
+  ): Promise<User> {
+    if (BANNED_USERNAMES.includes(data.username))
+      throw new BadRequestException({
+        statusCode: 400,
+        message: `Username "${data.username}" is not allowed`,
+        error: 'Bad Request',
+        errors: {
+          username: [`This username is not allowed`],
+        },
+      });
+
     const existingUsers = await Promise.all([
       this.usersRepository.findByEmail(data.email),
       this.usersRepository.findByUsername(data.username),
     ]);
 
     if (existingUsers[0])
-      throw new ConflictException(`Email ${data.email} is already in use`);
+      throw new ConflictException({
+        statusCode: 409,
+        message: `Email ${data.email} is already in use`,
+        error: 'Conflict',
+        errors: {
+          email: [`This email is already registered`],
+        },
+      });
     if (existingUsers[1])
-      throw new ConflictException(
-        `Username ${data.username} is already in use`,
-      );
+      throw new ConflictException({
+        statusCode: 409,
+        message: `Username ${data.username} is already in use`,
+        error: 'Conflict',
+        errors: {
+          username: [`This username is already taken`],
+        },
+      });
 
     const hashedPassword = bcrypt.hashSync(data.password, 10);
 
@@ -143,9 +126,20 @@ export class UsersService {
       password: hashedPassword,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userData } = user;
+    return this.formatUser(user);
+  }
 
-    return userData as User;
+  formatUser(user: BaseUser): User {
+    return {
+      uuid: user.uuid,
+      username: user.username,
+      email: user.email,
+      displayName: user.displayName || user.username,
+      avatarUrl: user.avatarUrl,
+      biography: user.biography,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      deletedAt: user.deletedAt,
+    };
   }
 }
