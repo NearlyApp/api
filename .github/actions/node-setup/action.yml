@@ -1,5 +1,5 @@
 name: 'Common Node.js Setup'
-input:
+inputs:
   node-version:
     required: false
     default: '22'
