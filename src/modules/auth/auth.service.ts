@@ -38,6 +38,8 @@ export class AuthService {
       biography: null,
       password: data.password,
       avatarUrl: null,
+      resetPasswordToken: null,
+      resetPasswordTokenExpiresAt: null,
     });
 
     return req.login(user, (error) => {
