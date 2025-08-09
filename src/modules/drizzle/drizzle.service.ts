@@ -1,21 +1,19 @@
-import { ConfigService } from '@config/config.service';
-import { DrizzleClient } from '@drizzle/drizzle.type';
-import { getDrizzleClient, getDrizzlePool } from '@nearlyapp/common';
+import {
+  DrizzleClient,
+  getDrizzleClient,
+  getDrizzlePool,
+} from '@nearlyapp/common';
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Pool } from 'pg';
 
 @Injectable()
 export class DrizzleService implements OnModuleDestroy {
   private readonly pool: Pool;
-  private readonly client: DrizzleClient;
+  public readonly client: DrizzleClient;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor() {
     this.pool = getDrizzlePool();
     this.client = getDrizzleClient();
-  }
-
-  getClient() {
-    return this.client;
   }
 
   async onModuleDestroy() {

@@ -12,13 +12,17 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
+    "resolveJsonModule": true,
     "paths": {
       "@lib/*": ["src/lib/*"],
+      "@middlewares/*": ["src/middlewares/*"],
+      "@auth/*": ["src/modules/auth/*"],
       "@config/*": ["src/modules/config/*"],
       "@drizzle/*": ["src/modules/drizzle/*"],
       "@users/*": ["src/modules/users/*"],
       "@modules/*": ["src/modules/*"],
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "package.json": ["package.json"]
     },
     "incremental": true,
     "skipLibCheck": true,

@@ -5,9 +5,11 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Query,
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
+import { GetUsersQueryDto } from '@users/users.dtos';
 import { Request } from 'express';
 
 @Controller('users')
@@ -17,22 +19,24 @@ export class UsersController {
   @Get('me')
   @HttpCode(HttpStatus.OK)
   getMe(@Req() req: Request) {
-    const user = req.user ? this.usersService.getUser(req.user.uuid) : null;
+    const user = req.user
+      ? this.usersService.getUserByUUID(req.user.uuid)
+      : null;
 
     if (!user) throw new UnauthorizedException('You are not authenticated');
 
     return user;
   }
 
-  @Get(':identifier')
+  @Get(':uuid')
   @HttpCode(HttpStatus.OK)
-  async getUser(@Param('identifier') identifier: string) {
-    return this.usersService.getUser(identifier);
+  async getUser(@Param('uuid') uuid: string) {
+    return this.usersService.getUserByUUID(uuid);
   }
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  async getUsers() {
-    return this.usersService.getUsers();
+  async getUsers(@Query() query: GetUsersQueryDto) {
+    return this.usersService.getUsers(query);
   }
 }
