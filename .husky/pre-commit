@@ -4,7 +4,7 @@
 
 npx lint-staged
 
-if git diff --cached --name-only | grep -q '\.npmrc$'; then
+if git diff --cached --name-only | grep -q '^\.npmrc$'; then
   TEMPLATE="$(dirname "$0")/.npmrc.template"
   if [ ! -f "$TEMPLATE" ]; then
     echo "❌ .npmrc.template not found!"
