@@ -2,12 +2,13 @@ name: CI
 
 on:
   pull_request:
-    branches:
-      - main
-      - development
+    branches: [main, development]
   push:
-    branches:
-      - main
+    branches: [main]
+
+env:
+  GHP_TOKEN: ${{ secrets.GHP_TOKEN }}
+  NODE_VERSION: '22'
 
 jobs:
   lint:
@@ -21,8 +22,9 @@ jobs:
       - name: 🔄 Checkout repository
         uses: actions/checkout@v4
 
-      - name: ⚙️ Set up Node.js
-        uses: ./.github/actions/node-setup
+      - uses: ./.github/actions/node-setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: ✅ Run linter
         run: npm run lint
@@ -39,8 +41,9 @@ jobs:
       - name: 🔄 Checkout repository
         uses: actions/checkout@v4
 
-      - name: ⚙️ Set up Node.js
-        uses: ./.github/actions/node-setup
+      - uses: ./.github/actions/node-setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: 🏗️ Build API
         run: npm run build

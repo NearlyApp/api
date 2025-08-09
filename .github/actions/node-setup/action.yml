@@ -16,11 +16,14 @@ runs:
 
     - name: Configure npm for GitHub Packages
       run: |
-        echo "@nearlyapp:registry=https://npm.pkg.github.com" > $GITHUB_WORKSPACE/.npmrc
+        echo "@nearlyapp:registry=https://npm.pkg.github.com" >> $GITHUB_WORKSPACE/.npmrc
         echo "//npm.pkg.github.com/:_authToken=${GHP_TOKEN}" >> $GITHUB_WORKSPACE/.npmrc
-      env:
-        GHP_TOKEN: ${{ secrets.GHP_TOKEN }}
+      shell: bash
 
     - name: 📦 Install dependencies
       run: npm ci
+      shell: bash
+
+    - name: 🧹 Clean up .npmrc
+      run: rm -f $GITHUB_WORKSPACE/.npmrc
       shell: bash
