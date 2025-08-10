@@ -1,1 +1,16 @@
+#!/bin/sh
+
+. "$(dirname "$0")/_/husky.sh"
+
 npx lint-staged
+
+if git diff --cached --name-only | grep -q '^\.npmrc$'; then
+  TEMPLATE="$(dirname "$0")/.npmrc.template"
+  if [ ! -f "$TEMPLATE" ]; then
+    echo "❌ .npmrc.template not found!"
+    exit 1
+  fi
+  cp "$TEMPLATE" .npmrc
+  git add .npmrc
+  echo "✅ .npmrc template copied to .npmrc"
+fi

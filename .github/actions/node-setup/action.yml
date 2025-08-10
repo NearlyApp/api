@@ -14,12 +14,6 @@ runs:
         registry-url: 'https://npm.pkg.github.com'
         scope: '@nearlyapp'
 
-    - name: Configure npm for GitHub Packages
-      run: |
-        echo "@nearlyapp:registry=https://npm.pkg.github.com" >> $GITHUB_WORKSPACE/.npmrc
-        echo "//npm.pkg.github.com/:_authToken=${GHP_TOKEN}" >> $GITHUB_WORKSPACE/.npmrc
-      shell: bash
-
     - name: 📦 Install dependencies
       run: npm ci
       shell: bash
