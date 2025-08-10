@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -12,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { UsersService } from '@users/users.service';
 import { Request } from 'express';
-import { CreatePostDto, GetPostsQueryDto } from './posts.dto';
+import { CreatePostDto, GetPostsQueryDto, UpdatePostDto } from './posts.dto';
 import { PostsService } from './posts.service';
 
 @Controller('posts')
@@ -49,5 +51,20 @@ export class PostsController {
     if (!user) throw new UnauthorizedException('You are not authenticated');
 
     return this.postsService.createPost(createPostDto);
+  }
+
+  @Patch(':uuid')
+  @HttpCode(HttpStatus.OK)
+  async updatePost(
+    @Param('uuid') uuid: string,
+    @Body() updatePostDto: UpdatePostDto,
+  ) {
+    return this.postsService.updatePost(uuid, updatePostDto);
+  }
+
+  @Delete(':uuid')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deletePost(@Param('uuid') uuid: string) {
+    return this.postsService.deletePost(uuid);
   }
 }

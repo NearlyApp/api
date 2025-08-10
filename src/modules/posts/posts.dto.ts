@@ -80,3 +80,15 @@ export class GetPostsQueryDto {
   })
   limit?: number;
 }
+
+export class UpdatePostDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2000, { message: 'Content cannot exceed 2000 characters' })
+  @ApiProperty({
+    description: 'Post content',
+    example: 'This is my first post!',
+    maxLength: 2000,
+  })
+  content: string;
+}

@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UsersService } from '@users/users.service';
-import { CreatePostDto, GetPostsQueryDto } from './posts.dto';
+import { CreatePostDto, GetPostsQueryDto, UpdatePostDto } from './posts.dto';
 import { PostsRepository } from './posts.repository';
 
 export const MAX_POSTS_PER_PAGE = 1000;
@@ -113,5 +113,20 @@ export class PostsService {
     });
 
     return post;
+  }
+
+  async updatePost(uuid: string, data: UpdatePostDto): Promise<BasePost> {
+    const updatedPosts = await this.postsRepository.update({ uuid }, data);
+    if (!updatedPosts || updatedPosts.length === 0)
+      throw new NotFoundException(`Post with UUID ${uuid} not found`);
+    return updatedPosts[0];
+  }
+
+  async deletePost(uuid: string): Promise<void> {
+    try {
+      await this.postsRepository.delete({ uuid });
+    } catch {
+      throw new Error(`Failed to delete post with UUID ${uuid}`);
+    }
   }
 }
