@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, development]
+  push:
+    branches: [main]
+
+env:
+  GHP_TOKEN: ${{ secrets.GHP_TOKEN }}
+  NODE_VERSION: '22'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: 🔄 Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: ./.github/actions/node-setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: ✅ Run linter
+        run: npm run lint
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
+
+    steps:
+      - name: 🔄 Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: ./.github/actions/node-setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 🏗️ Build API
+        run: npm run build

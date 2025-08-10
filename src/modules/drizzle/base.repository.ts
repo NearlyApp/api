@@ -3,13 +3,14 @@
 import { DrizzleService } from '@drizzle/drizzle.service';
 import {
   and,
+  count,
   eq,
   InferSelectModel,
   isNull,
   SQL,
   SQLWrapper,
 } from 'drizzle-orm';
-import { PgTable } from 'drizzle-orm/pg-core';
+import { PgSelect, PgTable, TableConfig } from 'drizzle-orm/pg-core';
 
 type WhereValue<T> = T | SQL | SQLWrapper;
 type WhereClause<TEntity> = Partial<{
@@ -25,7 +26,7 @@ export type FindOptions<
 type DataExcludedKeys = 'id' | 'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt';
 
 export abstract class BaseRepository<
-  TSchema extends PgTable,
+  TSchema extends PgTable<TableConfig>,
   TEntity extends InferSelectModel<TSchema> = InferSelectModel<TSchema>,
 > {
   constructor(
@@ -44,8 +45,8 @@ export abstract class BaseRepository<
     const { includeDeleted = false } = options;
 
     const conditions = this.buildConditions(where);
-    if (includeDeleted && this.schema['deletedAt'])
-      conditions.push(isNull(this.schema['deletedAt']));
+    if (!includeDeleted && this.schema['deletedAt'])
+      conditions.push(isNull(this.schema['deletedAt'] as SQL));
 
     const query = this.db
       .select()
@@ -76,7 +77,7 @@ export abstract class BaseRepository<
           ? eq(this.schema[field], value)
           : and(
               eq(this.schema[field], value),
-              isNull(this.schema['deletedAt']),
+              isNull(this.schema['deletedAt'] as SQL),
             ),
       )
       .limit(1);
@@ -94,8 +95,10 @@ export abstract class BaseRepository<
 
     let query = this.db.select().from(this.schema).$dynamic();
 
-    const conditions = this.buildConditions(where, includeDeleted);
+    const conditions = this.buildConditions(where);
     query = query.where(and(...conditions));
+    if (!includeDeleted && this.schema['deletedAt'])
+      query = query.where(isNull(this.schema['deletedAt'] as SQL));
 
     const result = await this.withPagination(query, offset, limit);
 
@@ -105,10 +108,6 @@ export abstract class BaseRepository<
   async create(
     data: Omit<Partial<TEntity>, DataExcludedKeys>,
   ): Promise<TEntity> {
-    if (this.schema['uuid']) data.uuid = crypto.randomUUID();
-    if (this.schema['createdAt']) data.createdAt = new Date();
-    if (this.schema['updatedAt']) data.updatedAt = new Date();
-
     const result = await this.db.insert(this.schema).values(data).returning();
 
     return result[0] as TEntity;
@@ -118,12 +117,14 @@ export abstract class BaseRepository<
     where: WhereClause<TEntity>,
     data: Omit<Partial<TEntity>, DataExcludedKeys>,
   ) {
-    if (this.schema['updatedAt']) data.updatedAt = new Date();
+    const _data: Partial<TEntity> = { ...data } as Partial<TEntity>;
+    if (this.schema['updatedAt'])
+      (_data as Partial<TEntity> & { updatedAt: Date }).updatedAt = new Date();
 
     const result = await this.db
       .update(this.schema)
-      .set(data)
-      .where(and(this.buildConditions(where)))
+      .set(_data)
+      .where(and(...this.buildConditions(where)))
       .returning();
 
     return result;
@@ -135,26 +136,35 @@ export abstract class BaseRepository<
   ) {
     const { hardDelete = false } = options;
 
+    const conditions = this.buildConditions(where);
+
     if (hardDelete || !this.schema['deletedAt'])
-      await this.db.delete(this.schema).where(and(this.buildConditions(where)));
-    else await this.update(where, { deletedAt: new Date() });
+      await this.db.delete(this.schema).where(and(...conditions));
+    else {
+      await this.db
+        .update(this.schema)
+        .set({ deletedAt: new Date() })
+        .where(and(...conditions));
+    }
   }
 
   async count(
-    where?: Nullable<WhereClause<TEntity>> = null,
+    where?: Nullable<WhereClause<TEntity>>,
     options: FindOptions<false> = {},
   ): Promise<number> {
     const { includeDeleted = false } = options;
     const query = this.db
-      .select({ count: this.count() })
+      .select({ count: count() })
       .from(this.schema)
       .$dynamic();
 
     const conditions = this.buildConditions(where);
     if (!includeDeleted && this.schema['deletedAt'])
-      conditions.push(isNull(this.schema['deletedAt']));
+      conditions.push(isNull(this.schema['deletedAt'] as SQL));
 
-    return ((await query.where(and(...conditions))).count as number) ?? 0;
+    const result = await query.where(and(...conditions));
+
+    return result[0].count ?? 0;
   }
 
   protected withPagination<T extends PgSelect>(
@@ -169,8 +179,8 @@ export abstract class BaseRepository<
     return query;
   }
 
-  protected buildConditions(where: Nullable<WhereClause<TEntity>>) {
-    const conditions = [];
+  protected buildConditions(where: Nullish<WhereClause<TEntity>>) {
+    const conditions: (SQL | SQLWrapper)[] = [];
     if (where)
       conditions.push(
         ...Object.entries(where).map(([key, value]) => {
