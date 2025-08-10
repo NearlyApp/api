@@ -31,6 +31,7 @@ export class CreatePostDto {
   authorUuid: string;
 
   @IsUUID()
+  @IsOptional()
   @ApiProperty({
     description: 'UUID of the parent post (for replies)',
     example: '550e8400-e29b-41d4-a716-446655440001',
