@@ -20,8 +20,8 @@ export class LoggingInterceptor implements NestInterceptor {
 
   intercept(
     context: ExecutionContext,
-    next: CallHandler<any>,
-  ): Observable<any> | Promise<Observable<any>> {
+    next: CallHandler,
+  ): Observable<unknown> | Promise<Observable<unknown>> {
     const request: Request = context.switchToHttp().getRequest();
     const start = Date.now();
 
