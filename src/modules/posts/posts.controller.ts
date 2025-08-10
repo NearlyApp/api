@@ -32,18 +32,20 @@ export class PostsController {
     return this.postsService.getPostByUUID(uuid);
   }
 
-  @Get('author/:identifier')
+  @Get('author/:uuid')
   async getPostsByAuthor(
     @Query() query: GetPostsQueryDto,
-    @Param('identifier') identifier: string,
+    @Param('uuid') uuid: string,
   ) {
-    return this.postsService.getPostsByAuthor(query, identifier);
+    return this.postsService.getPostsByAuthor(query, uuid);
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createPost(@Req() req: Request, @Body() createPostDto: CreatePostDto) {
-    const user = req.user ? this.usersService.getUser(req.user.uuid) : null;
+    const user = req.user
+      ? this.usersService.getUserByUUID(req.user.uuid)
+      : null;
     if (!user) throw new UnauthorizedException('You are not authenticated');
 
     return this.postsService.createPost(createPostDto);

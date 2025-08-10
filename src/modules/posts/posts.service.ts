@@ -26,10 +26,10 @@ export class PostsService {
 
   async getPostsByAuthor(
     query: GetPostsQueryDto,
-    identifier: string,
+    uuid: string,
   ): Promise<PaginatedResult<BasePost, 'posts'>> {
-    const user = await this.usersService.getUser(identifier);
-    if (!user) throw new NotFoundException(`User ${identifier} not found`);
+    const user = await this.usersService.getUserByUUID(uuid);
+    if (!user) throw new NotFoundException(`User ${uuid} not found`);
 
     const { limit, offset } = this.postsRepository.getPaginationParams(
       query,
@@ -80,7 +80,7 @@ export class PostsService {
   }
 
   async createPost(data: CreatePostDto): Promise<BasePost> {
-    const author = await this.usersService.getUser(data.authorUuid);
+    const author = await this.usersService.getUserByUUID(data.authorUuid);
     if (!author) {
       throw new NotFoundException(
         `Author with UUID ${data.authorUuid} not found`,
@@ -90,7 +90,7 @@ export class PostsService {
     if (data.parentPostUuid) {
       try {
         await this.getPostByUUID(data.parentPostUuid);
-      } catch (error) {
+      } catch {
         throw new BadRequestException(
           `Parent post with UUID ${data.parentPostUuid} not found`,
         );
