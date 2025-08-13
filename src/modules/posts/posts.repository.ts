@@ -21,4 +21,11 @@ export class PostsRepository extends BaseRepository<typeof postsSchema> {
   async findByAuthorUUID(authorUuid: string, options?: FindOptions) {
     return this.findMany({ authorUuid }, options);
   }
+
+  async deleteAll(authorUuid: string, options?: FindOptions) {
+    const posts = await this.findByAuthorUUID(authorUuid, options);
+    for (const post of posts) {
+      await this.delete({ uuid: post.uuid });
+    }
+  }
 }

@@ -79,12 +79,10 @@ export class PostsService {
     };
   }
 
-  async createPost(data: CreatePostDto): Promise<BasePost> {
-    const author = await this.usersService.getUserByUUID(data.authorUuid);
+  async createPost(userUuid: string, data: CreatePostDto): Promise<BasePost> {
+    const author = await this.usersService.getUserByUUID(userUuid);
     if (!author) {
-      throw new NotFoundException(
-        `Author with UUID ${data.authorUuid} not found`,
-      );
+      throw new NotFoundException(`Author with UUID ${userUuid} not found`);
     }
 
     if (data.parentPostUuid) {
@@ -110,6 +108,7 @@ export class PostsService {
     const post = await this.postsRepository.create({
       ...data,
       content: sanitizedContent,
+      authorUuid: author.uuid,
     });
 
     return post;
@@ -127,6 +126,14 @@ export class PostsService {
       await this.postsRepository.delete({ uuid });
     } catch {
       throw new Error(`Failed to delete post with UUID ${uuid}`);
+    }
+  }
+
+  async deleteAll(authorUuid: string): Promise<void> {
+    try {
+      await this.postsRepository.deleteAll(authorUuid);
+    } catch {
+      throw new Error('Failed to delete all posts');
     }
   }
 }
