@@ -136,4 +136,12 @@ export class PostsService {
       throw new Error('Failed to delete all posts');
     }
   }
+
+  async checkPostOwnership(
+    userUuid: string,
+    postUuid: string,
+  ): Promise<boolean> {
+    const post = await this.getPostByUUID(postUuid);
+    return post.authorUuid === userUuid;
+  }
 }

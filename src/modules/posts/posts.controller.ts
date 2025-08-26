@@ -46,12 +46,10 @@ export class PostsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createPost(@Req() req: Request, @Body() createPostDto: CreatePostDto) {
-    const user = req.user
-      ? this.usersService.getUserByUUID(req.user.uuid)
-      : null;
+    const user = req.user;
     if (!user) throw new UnauthorizedException('You are not authenticated');
 
-    return this.postsService.createPost((await user).uuid, createPostDto);
+    return this.postsService.createPost(user.uuid, createPostDto);
   }
 
   @Patch(':uuid')
@@ -61,14 +59,11 @@ export class PostsController {
     @Param('uuid') uuid: string,
     @Body() updatePostDto: UpdatePostDto,
   ) {
-    const user = req.user
-      ? this.usersService.getUserByUUID(req.user.uuid)
-      : null;
+    const user = req.user;
     if (!user) throw new UnauthorizedException('You are not authenticated');
 
-    const existingPost = await this.postsService.getPostByUUID(uuid);
-
-    if (existingPost.authorUuid !== (await user).uuid) {
+    const isOwner = await this.postsService.checkPostOwnership(user.uuid, uuid);
+    if (!isOwner) {
       throw new ForbiddenException('You can only update your own posts');
     }
 
@@ -78,14 +73,11 @@ export class PostsController {
   @Delete(':uuid')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deletePost(@Req() req: Request, @Param('uuid') uuid: string) {
-    const user = req.user
-      ? this.usersService.getUserByUUID(req.user.uuid)
-      : null;
+    const user = req.user;
     if (!user) throw new UnauthorizedException('You are not authenticated');
 
-    const existingPost = await this.postsService.getPostByUUID(uuid);
-
-    if (existingPost.authorUuid !== (await user).uuid) {
+    const isOwner = await this.postsService.checkPostOwnership(user.uuid, uuid);
+    if (!isOwner) {
       throw new ForbiddenException('You can only delete your own posts');
     }
 
