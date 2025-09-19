@@ -1,15 +1,25 @@
+import ImageInterceptor from '@/interceptors/file.interceptor';
 import { UsersService } from '@modules/users/users.service';
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
+  Post,
   Query,
   Req,
   UnauthorizedException,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
-import { GetUsersQueryDto } from '@users/users.dtos';
+import {
+  CreateUserDto,
+  GetUsersQueryDto,
+  UpdateUserDto,
+} from '@users/users.dtos';
 import { Request } from 'express';
 
 @Controller('users')
@@ -38,5 +48,26 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   async getUsers(@Query() query: GetUsersQueryDto) {
     return this.usersService.getUsers(query);
+  }
+
+  @Post()
+  @UseInterceptors(ImageInterceptor())
+  async createUser(
+    @UploadedFile() file: Express.Multer.File,
+    @Body()
+    body: CreateUserDto,
+  ) {
+    return this.usersService.createUser(body, file);
+  }
+
+  @Patch(':uuid')
+  @UseInterceptors(ImageInterceptor())
+  async updateUser(
+    @Param('uuid') uuid: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body()
+    body: UpdateUserDto,
+  ) {
+    return this.usersService.updateUser(uuid, body, file);
   }
 }

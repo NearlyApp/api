@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 
 import { DrizzleService } from '@drizzle/drizzle.service';
@@ -116,7 +117,7 @@ export abstract class BaseRepository<
   async update(
     where: WhereClause<TEntity>,
     data: Omit<Partial<TEntity>, DataExcludedKeys>,
-  ) {
+  ): Promise<TEntity[]> {
     const _data: Partial<TEntity> = { ...data } as Partial<TEntity>;
     if (this.schema['updatedAt'])
       (_data as Partial<TEntity> & { updatedAt: Date }).updatedAt = new Date();

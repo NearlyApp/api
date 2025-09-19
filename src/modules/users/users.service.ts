@@ -1,4 +1,5 @@
 import type { PaginatedResult } from '@/types/pagination';
+import { S3Service } from '@modules/s3/s3.service';
 import { UsersRepository } from '@modules/users/users.repository';
 import { BaseUser, User } from '@nearlyapp/common';
 import {
@@ -15,7 +16,10 @@ export const MAX_USERS_PER_PAGE = 1000;
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly usersRepository: UsersRepository) {}
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly s3Service: S3Service,
+  ) {}
 
   async validateUser(login: string, password: string): Promise<Nullable<User>> {
     const user = (
@@ -84,6 +88,7 @@ export class UsersService {
 
   async createUser(
     data: Omit<BaseUser, 'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt'>,
+    avatarFile?: Express.Multer.File,
   ): Promise<User> {
     if (BANNED_USERNAMES.includes(data.username))
       throw new BadRequestException({
@@ -121,12 +126,47 @@ export class UsersService {
 
     const hashedPassword = bcrypt.hashSync(data.password, 10);
 
+    let avatarUrl: string | undefined;
+    if (avatarFile) {
+      const uploaded = await this.s3Service.upload(avatarFile);
+      avatarUrl = uploaded?.url;
+    }
+
     const user = await this.usersRepository.create({
       ...data,
       password: hashedPassword,
+      avatarUrl,
     });
 
     return this.formatUser(user);
+  }
+
+  async updateUser(
+    uuid: string,
+    data: Partial<
+      Omit<BaseUser, 'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt'>
+    >,
+    avatarFile?: Express.Multer.File,
+  ): Promise<User> {
+    const user = await this.usersRepository.findByUUID(uuid);
+    if (!user) throw new NotFoundException(`User with UUID ${uuid} not found`);
+
+    let avatarUrl = user.avatarUrl;
+    if (avatarFile) {
+      if (user.avatarUrl) {
+        const key = user.avatarUrl.split('/').pop();
+        if (key) await this.s3Service.delete(key);
+      }
+      const uploaded = await this.s3Service.upload(avatarFile);
+      avatarUrl = uploaded?.url ?? avatarUrl;
+    }
+
+    const updated = await this.usersRepository.update(
+      { uuid },
+      { ...data, avatarUrl },
+    );
+
+    return this.formatUser(updated[0]);
   }
 
   formatUser(user: BaseUser): User {
