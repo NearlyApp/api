@@ -135,6 +135,8 @@ export class UsersService {
       email: user.email,
       displayName: user.displayName || user.username,
       avatarUrl: user.avatarUrl,
+      bannerUrl: user.bannerUrl,
+      profilePrivacyLevel: user.profilePrivacyLevel,
       biography: user.biography,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,

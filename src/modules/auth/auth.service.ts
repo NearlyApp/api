@@ -38,6 +38,8 @@ export class AuthService {
       biography: null,
       password: data.password,
       avatarUrl: null,
+      bannerUrl: null,
+      profilePrivacyLevel: 'public',
       resetPasswordToken: null,
       resetPasswordTokenExpiresAt: null,
     });
