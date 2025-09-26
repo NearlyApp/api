@@ -1,8 +1,10 @@
 import { PaginatedResult } from '@/types/pagination';
+import { ConfigService } from '@config/config.service';
 import { BasePost } from '@nearlyapp/common';
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { UsersService } from '@users/users.service';
@@ -16,11 +18,45 @@ export class PostsService {
   constructor(
     private readonly postsRepository: PostsRepository,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   async getPostByUUID(uuid: string): Promise<BasePost> {
     const post = await this.postsRepository.findByUUID(uuid);
     if (!post) throw new NotFoundException(`Post with UUID ${uuid} not found`);
+    // If status is not PROCESSED or FAILED, get the status from Recommendation API and update in DB
+    if (post.status !== 'PROCESSED' && post.status !== 'FAILED') {
+      try {
+        const statusResult = await fetch(
+          this.configService.get('RECOMMENDATION_API_URL')! +
+            `/data/${post.uuid}`,
+          {
+            method: 'GET',
+            headers: {
+              'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
+            },
+          },
+        );
+        if (statusResult.ok) {
+          const statusData = (await statusResult.json()) as {
+            data: { status: BasePost['status'] };
+          };
+          await this.postsRepository.update(
+            { uuid: post.uuid },
+
+            { status: statusData.data.status },
+          );
+        } else {
+          console.error(
+            `Failed to get status for post ${post.uuid} from recommendation API: ${statusResult.status}\n${await statusResult.json()}`,
+          );
+        }
+      } catch (error) {
+        console.error(
+          `Error while fetching status for post ${post.uuid} from recommendation API: ${error}`,
+        );
+      }
+    }
     return post;
   }
 
@@ -38,10 +74,13 @@ export class PostsService {
 
     const [posts, count] = await Promise.all([
       this.postsRepository.findMany(
-        { authorUuid: user.uuid },
+        { authorUuid: user.uuid, status: 'PROCESSED' },
         { limit, offset },
       ),
-      this.postsRepository.count({ authorUuid: user.uuid }),
+      this.postsRepository.count({
+        authorUuid: user.uuid,
+        status: 'PROCESSED',
+      }),
     ]);
 
     return {
@@ -64,8 +103,8 @@ export class PostsService {
     );
 
     const [posts, count] = await Promise.all([
-      this.postsRepository.findMany(null, { limit, offset }),
-      this.postsRepository.count(),
+      this.postsRepository.findMany({ status: 'PROCESSED' }, { limit, offset }),
+      this.postsRepository.count({ status: 'PROCESSED' }),
     ]);
 
     return {
@@ -111,6 +150,36 @@ export class PostsService {
       authorUuid: author.uuid,
     });
 
+    const ingestResult = await fetch(
+      this.configService.get('RECOMMENDATION_API_URL')! + '/ingest',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
+        },
+        body: JSON.stringify({
+          data: {
+            post_id: post.uuid,
+            metadata: {
+              location: {
+                lat: post.lat,
+                lon: post.lng,
+              },
+            },
+            text: post.content,
+          },
+        }),
+      },
+    );
+    if (!ingestResult.ok) {
+      console.error(
+        `Failed to ingest post ${post.uuid} to recommendation API: ${ingestResult.status}\n${await ingestResult.json()}`,
+      );
+      // Rollback post creation
+      await this.postsRepository.delete({ uuid: post.uuid });
+      throw new InternalServerErrorException('Failed to process post');
+    }
     return post;
   }
 
@@ -124,6 +193,21 @@ export class PostsService {
   async deletePost(uuid: string): Promise<void> {
     try {
       await this.postsRepository.delete({ uuid });
+      // Also delete from Recommendation API
+      const deleteResult = await fetch(
+        this.configService.get('RECOMMENDATION_API_URL')! + `/data/${uuid}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
+          },
+        },
+      );
+      if (!deleteResult.ok) {
+        console.error(
+          `Failed to delete post ${uuid} from recommendation API: ${deleteResult.status}\n${await deleteResult.json()}`,
+        );
+      }
     } catch {
       throw new Error(`Failed to delete post with UUID ${uuid}`);
     }

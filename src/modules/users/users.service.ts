@@ -130,15 +130,8 @@ export class UsersService {
 
   formatUser(user: BaseUser): User {
     return {
-      uuid: user.uuid,
-      username: user.username,
-      email: user.email,
+      ...user,
       displayName: user.displayName || user.username,
-      avatarUrl: user.avatarUrl,
-      biography: user.biography,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      deletedAt: user.deletedAt,
     };
   }
 }

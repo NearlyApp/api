@@ -14,6 +14,9 @@ const configSchema = z.object({
   REDIS_URL: z.string().default('redis://localhost:6379'),
 
   SECRET_KEY: z.string(),
+
+  RECOMMENDATION_API_URL: z.string().url(),
+  RECOMMENDATION_API_KEY: z.string(),
 });
 
 export default configSchema;
