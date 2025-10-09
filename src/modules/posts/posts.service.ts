@@ -1,5 +1,5 @@
 import { PaginatedResult } from '@/types/pagination';
-import { BasePost } from '@nearlyapp/common';
+import { BasePost, Post } from '@nearlyapp/common';
 import {
   BadRequestException,
   Injectable,
@@ -12,22 +12,21 @@ import { PostsRepository } from './posts.repository';
 export const MAX_POSTS_PER_PAGE = 1000;
 @Injectable()
 export class PostsService {
-  // TODO: replace type BasePost by Post to get likes
   constructor(
     private readonly postsRepository: PostsRepository,
     private readonly usersService: UsersService,
   ) {}
 
-  async getPostByUUID(uuid: string): Promise<BasePost> {
+  async getPostByUUID(uuid: string): Promise<Post> {
     const post = await this.postsRepository.findByUUID(uuid);
     if (!post) throw new NotFoundException(`Post with UUID ${uuid} not found`);
-    return post;
+    return this.formatPost(post);
   }
 
   async getPostsByAuthor(
     query: GetPostsQueryDto,
     uuid: string,
-  ): Promise<PaginatedResult<BasePost, 'posts'>> {
+  ): Promise<PaginatedResult<Post, 'posts'>> {
     const user = await this.usersService.getUserByUUID(uuid);
     if (!user) throw new NotFoundException(`User ${uuid} not found`);
 
@@ -45,7 +44,7 @@ export class PostsService {
     ]);
 
     return {
-      posts,
+      posts: posts.map((post) => this.formatPost(post)),
       pagination: {
         page: query.page ?? 1,
         limit,
@@ -57,7 +56,7 @@ export class PostsService {
 
   async getPosts(
     query: GetPostsQueryDto,
-  ): Promise<PaginatedResult<BasePost, 'posts'>> {
+  ): Promise<PaginatedResult<Post, 'posts'>> {
     const { limit, offset } = this.postsRepository.getPaginationParams(
       query,
       MAX_POSTS_PER_PAGE,
@@ -69,7 +68,7 @@ export class PostsService {
     ]);
 
     return {
-      posts,
+      posts: posts.map((post) => this.formatPost(post)),
       pagination: {
         page: query.page ?? 1,
         limit,
@@ -79,7 +78,7 @@ export class PostsService {
     };
   }
 
-  async createPost(userUuid: string, data: CreatePostDto): Promise<BasePost> {
+  async createPost(userUuid: string, data: CreatePostDto): Promise<Post> {
     const author = await this.usersService.getUserByUUID(userUuid);
     if (!author) {
       throw new NotFoundException(`Author with UUID ${userUuid} not found`);
@@ -111,14 +110,14 @@ export class PostsService {
       authorUuid: author.uuid,
     });
 
-    return post;
+    return this.formatPost(post);
   }
 
-  async updatePost(uuid: string, data: UpdatePostDto): Promise<BasePost> {
+  async updatePost(uuid: string, data: UpdatePostDto): Promise<Post> {
     const updatedPosts = await this.postsRepository.update({ uuid }, data);
     if (!updatedPosts || updatedPosts.length === 0)
       throw new NotFoundException(`Post with UUID ${uuid} not found`);
-    return updatedPosts[0];
+    return this.formatPost(updatedPosts[0]);
   }
 
   async deletePost(uuid: string): Promise<void> {
@@ -143,5 +142,23 @@ export class PostsService {
   ): Promise<boolean> {
     const post = await this.getPostByUUID(postUuid);
     return post.authorUuid === userUuid;
+  }
+
+  formatPost(post: BasePost): Post {
+    return {
+      uuid: post.uuid,
+      authorUuid: post.authorUuid,
+      parentPostUuid: post.parentPostUuid,
+      content: post.content,
+      coords: {
+        lat: post.lat,
+        lng: post.lng,
+        alt: post.alt,
+      },
+      likes: 0,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      deletedAt: post.deletedAt,
+    };
   }
 }
