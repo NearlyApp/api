@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: nearly_admin
+      POSTGRES_PASSWORD: f9X1&n2g3ht^aImQ
+      POSTGRES_DB: nearly-db-local
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
+    ports:
+      - 5432:5432
+    networks:
+      - backend
+
+  redis:
+    image: redis:7
+    ports:
+      - 6379:6379
+    networks:
+      - backend
+
+networks:
+  backend:
+  frontend:
+
+volumes:
+  postgres_data:
+    driver: local

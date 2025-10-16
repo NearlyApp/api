@@ -5,6 +5,7 @@ import {
   IsLatitude,
   IsLongitude,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -57,6 +58,11 @@ export class CreatePostDto {
     maximum: 180,
   })
   lng: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  alt: Nullable<number>;
 }
 
 export class GetPostsQueryDto {
