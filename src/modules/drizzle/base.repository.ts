@@ -96,9 +96,12 @@ export abstract class BaseRepository<
     let query = this.db.select().from(this.schema).$dynamic();
 
     const conditions = this.buildConditions(where);
-    query = query.where(and(...conditions));
     if (!includeDeleted && this.schema['deletedAt'])
-      query = query.where(isNull(this.schema['deletedAt'] as SQL));
+      conditions.push(isNull(this.schema['deletedAt'] as SQL));
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
 
     const result = await this.withPagination(query, offset, limit);
 
@@ -195,5 +198,18 @@ export abstract class BaseRepository<
         }),
       );
     return conditions;
+  }
+
+  getPaginationParams(
+    query: { page?: number; limit?: number },
+    maxDataPerPage: number,
+  ): {
+    limit: number;
+    offset: number;
+  } {
+    const limit = Math.min(query.limit ?? maxDataPerPage, maxDataPerPage);
+    const offset = query.page ? (query.page - 1) * limit : 0;
+
+    return { limit, offset };
   }
 }

@@ -14,13 +14,16 @@
     "baseUrl": "./",
     "resolveJsonModule": true,
     "paths": {
+      "@interceptors/*": ["src/interceptors/*"],
       "@lib/*": ["src/lib/*"],
       "@middlewares/*": ["src/middlewares/*"],
       "@auth/*": ["src/modules/auth/*"],
       "@config/*": ["src/modules/config/*"],
       "@drizzle/*": ["src/modules/drizzle/*"],
+      "@posts/*": ["src/modules/posts/*"],
       "@users/*": ["src/modules/users/*"],
       "@modules/*": ["src/modules/*"],
+      "@pipes/*": ["src/pipes/*"],
       "@/*": ["src/*"],
       "package.json": ["package.json"]
     },
