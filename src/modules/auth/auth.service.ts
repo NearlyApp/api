@@ -42,8 +42,6 @@ export class AuthService {
       profilePrivacyLevel: 'public',
       resetPasswordToken: null,
       resetPasswordTokenExpiresAt: null,
-      bannerUrl: null,
-      profilePrivacyLevel: 'public',
     });
 
     return req.login(user, (error) => {

@@ -1,6 +1,6 @@
 import { PaginatedResult } from '@/types/pagination';
 import { ConfigService } from '@config/config.service';
-import { BasePost } from '@nearlyapp/common';
+import { BasePost, Post } from '@nearlyapp/common';
 import {
   BadRequestException,
   Injectable,
@@ -56,7 +56,7 @@ export class PostsService {
         );
       }
     }
-    return post;
+    return this.formatPost(post);
   }
 
   async getPostsByAuthor(
@@ -179,7 +179,7 @@ export class PostsService {
       await this.postsRepository.delete({ uuid: post.uuid });
       throw new InternalServerErrorException('Failed to process post');
     }
-    return post;
+    return this.formatPost(post);
   }
 
   async updatePost(uuid: string, data: UpdatePostDto): Promise<Post> {
