@@ -31,10 +31,10 @@ export abstract class BaseRepository<
 > {
   constructor(
     protected readonly drizzleService: DrizzleService,
-    protected readonly schema: TSchema,
+    public readonly schema: TSchema,
   ) {}
 
-  protected get db() {
+  public get db() {
     return this.drizzleService.client;
   }
 

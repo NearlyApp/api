@@ -1,7 +1,9 @@
+*.secret
 # compiled output
 /dist
 /node_modules
 /build
+docker-compose.yml
 
 # Logs
 logs
