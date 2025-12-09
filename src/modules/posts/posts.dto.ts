@@ -98,3 +98,16 @@ export class UpdatePostDto {
   })
   content: string;
 }
+
+export class UpdatePostStatusDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2000, { message: 'Content cannot exceed 2000 characters' })
+  @ApiProperty({
+    description:
+      'Status of the post after processing by the recommendation service',
+    example: 'PROCESSED!',
+    maxLength: 2000,
+  })
+  status: string;
+}

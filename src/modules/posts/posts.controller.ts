@@ -70,6 +70,15 @@ export class PostsController {
     return this.postsService.updatePost(uuid, updatePostDto);
   }
 
+  @Patch(':uuid/status')
+  @HttpCode(HttpStatus.OK)
+  async updatePostStatus(
+    @Param('uuid') uuid: string,
+    @Body() updatePostDto: UpdatePostDto,
+  ) {
+    return this.postsService.updatePost(uuid, updatePostDto);
+  }
+
   @Delete(':uuid')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deletePost(@Req() req: Request, @Param('uuid') uuid: string) {
