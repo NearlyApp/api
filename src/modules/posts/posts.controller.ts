@@ -15,7 +15,12 @@ import {
 } from '@nestjs/common';
 import { UsersService } from '@users/users.service';
 import { Request } from 'express';
-import { CreatePostDto, GetPostsQueryDto, UpdatePostDto } from './posts.dto';
+import {
+  CreatePostDto,
+  GetPostsQueryDto,
+  UpdatePostDto,
+  UpdatePostStatusDto,
+} from './posts.dto';
 import { PostsService } from './posts.service';
 
 @Controller('posts')
@@ -70,13 +75,13 @@ export class PostsController {
     return this.postsService.updatePost(uuid, updatePostDto);
   }
 
-  @Patch(':uuid/status')
+  @Patch('/callback/')
   @HttpCode(HttpStatus.OK)
-  async updatePostStatus(
-    @Param('uuid') uuid: string,
-    @Body() updatePostDto: UpdatePostDto,
-  ) {
-    return this.postsService.updatePost(uuid, updatePostDto);
+  async updatePostStatus(@Body() updatePostDto: UpdatePostStatusDto) {
+    return this.postsService.updateStatusPost(
+      updatePostDto.post_id,
+      updatePostDto.status,
+    );
   }
 
   @Delete(':uuid')

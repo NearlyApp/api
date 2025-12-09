@@ -23,39 +23,6 @@ export class PostsService {
   async getPostByUUID(uuid: string): Promise<Post> {
     const post = await this.postsRepository.findByUUID(uuid);
     if (!post) throw new NotFoundException(`Post with UUID ${uuid} not found`);
-    // If status is not PROCESSED or FAILED, get the status from Recommendation API and update in DB
-    if (post.status !== 'PROCESSED' && post.status !== 'FAILED') {
-      try {
-        const statusResult = await fetch(
-          this.configService.get('RECOMMENDATION_API_URL')! +
-            `/data/${post.uuid}`,
-          {
-            method: 'GET',
-            headers: {
-              'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
-            },
-          },
-        );
-        if (statusResult.ok) {
-          const statusData = (await statusResult.json()) as {
-            data: { status: BasePost['status'] };
-          };
-          await this.postsRepository.update(
-            { uuid: post.uuid },
-
-            { status: statusData.data.status },
-          );
-        } else {
-          console.error(
-            `Failed to get status for post ${post.uuid} from recommendation API: ${statusResult.status}\n${await statusResult.json()}`,
-          );
-        }
-      } catch (error) {
-        console.error(
-          `Error while fetching status for post ${post.uuid} from recommendation API: ${error}`,
-        );
-      }
-    }
     return this.formatPost(post);
   }
 
@@ -184,6 +151,18 @@ export class PostsService {
 
   async updatePost(uuid: string, data: UpdatePostDto): Promise<Post> {
     const updatedPosts = await this.postsRepository.update({ uuid }, data);
+    if (!updatedPosts || updatedPosts.length === 0)
+      throw new NotFoundException(`Post with UUID ${uuid} not found`);
+    return this.formatPost(updatedPosts[0]);
+  }
+
+  async updateStatusPost(
+    uuid: string,
+    status: string | undefined,
+  ): Promise<Post> {
+    const updatedPosts = await this.postsRepository.update({ uuid }, {
+      status,
+    } as any);
     if (!updatedPosts || updatedPosts.length === 0)
       throw new NotFoundException(`Post with UUID ${uuid} not found`);
     return this.formatPost(updatedPosts[0]);

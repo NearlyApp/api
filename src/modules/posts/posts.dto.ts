@@ -100,14 +100,18 @@ export class UpdatePostDto {
 }
 
 export class UpdatePostStatusDto {
+  @IsUUID()
+  @ApiProperty({
+    description: 'UUID of the post',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  post_id: string;
+
   @IsString()
   @IsNotEmpty()
-  @MaxLength(2000, { message: 'Content cannot exceed 2000 characters' })
   @ApiProperty({
-    description:
-      'Status of the post after processing by the recommendation service',
-    example: 'PROCESSED!',
-    maxLength: 2000,
+    description: 'New status of the post',
+    example: 'PROCESSED',
   })
   status: string;
 }
