@@ -125,6 +125,7 @@ export class PostsService {
           'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
         },
         body: JSON.stringify({
+          callback_url: this.configService.get<string>('CALLBACK_API_URL')!,
           data: {
             post_id: post.uuid,
             metadata: {
@@ -139,9 +140,11 @@ export class PostsService {
       },
     );
     if (!ingestResult.ok) {
+      const errorBody: string = await ingestResult.text();
       console.error(
-        `Failed to ingest post ${post.uuid} to recommendation API: ${ingestResult.status}\n${await ingestResult.json()}`,
+        `Failed to ingest post ${post.uuid} to recommendation API: ${ingestResult.status}\n${errorBody}`,
       );
+
       // Rollback post creation
       await this.postsRepository.delete({ uuid: post.uuid });
       throw new InternalServerErrorException('Failed to process post');
@@ -158,11 +161,19 @@ export class PostsService {
 
   async updateStatusPost(
     uuid: string,
-    status: string | undefined,
+    status:
+      | 'WAITING_FOR_PROCESSING'
+      | 'PROCESSING'
+      | 'PROCESSED'
+      | 'FAILED'
+      | undefined,
   ): Promise<Post> {
-    const updatedPosts = await this.postsRepository.update({ uuid }, {
-      status,
-    } as any);
+    const updatedPosts = await this.postsRepository.update(
+      { uuid },
+      {
+        status,
+      },
+    );
     if (!updatedPosts || updatedPosts.length === 0)
       throw new NotFoundException(`Post with UUID ${uuid} not found`);
     return this.formatPost(updatedPosts[0]);

@@ -75,7 +75,7 @@ export class PostsController {
     return this.postsService.updatePost(uuid, updatePostDto);
   }
 
-  @Patch('/callback/')
+  @Post('/callback/')
   @HttpCode(HttpStatus.OK)
   async updatePostStatus(@Body() updatePostDto: UpdatePostStatusDto) {
     return this.postsService.updateStatusPost(
