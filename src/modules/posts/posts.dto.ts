@@ -1,3 +1,4 @@
+import { RecommendationStatus } from '@/types/Recommendation';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
@@ -113,5 +114,5 @@ export class UpdatePostStatusDto {
     description: 'New status of the post',
     example: 'PROCESSED',
   })
-  status: string;
+  status: RecommendationStatus;
 }

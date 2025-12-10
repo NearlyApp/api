@@ -1,4 +1,5 @@
 import { PaginatedResult } from '@/types/pagination';
+import { RecommendationStatus } from '@/types/Recommendation';
 import { ConfigService } from '@config/config.service';
 import { BasePost, Post } from '@nearlyapp/common';
 import {
@@ -161,12 +162,7 @@ export class PostsService {
 
   async updateStatusPost(
     uuid: string,
-    status:
-      | 'WAITING_FOR_PROCESSING'
-      | 'PROCESSING'
-      | 'PROCESSED'
-      | 'FAILED'
-      | undefined,
+    status: RecommendationStatus,
   ): Promise<Post> {
     const updatedPosts = await this.postsRepository.update(
       { uuid },
@@ -216,6 +212,12 @@ export class PostsService {
   ): Promise<boolean> {
     const post = await this.getPostByUUID(postUuid);
     return post.authorUuid === userUuid;
+  }
+
+  // Seed for random posts
+  async getRandomPosts(count: number): Promise<Post[]> {
+    const posts = await this.postsRepository.getRandomPosts(count);
+    return posts.map((p) => this.formatPost(p));
   }
 
   formatPost(post: BasePost): Post {
