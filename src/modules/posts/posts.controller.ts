@@ -41,7 +41,7 @@ export class PostsController {
 
   @Post('/callback/')
   @HttpCode(HttpStatus.OK)
-  async updatePostStatus(@Body() updatePostDto: UpdatePostStatusDto) {
+  updatePostStatus(@Body() updatePostDto: UpdatePostStatusDto) {
     return this.postsService.updateStatusPost(
       updatePostDto.post_id,
       updatePostDto.status,
@@ -53,6 +53,11 @@ export class PostsController {
   async recommendPosts() {
     // Seed for recommendation
     const firstRandomPosts = await this.postsService.getRandomPosts(5);
+
+    console.debug(
+      'firstRandomPosts',
+      JSON.stringify(firstRandomPosts, null, 2),
+    );
 
     const recommendedPostsResult = await fetch(
       this.configService.get('RECOMMENDATION_API_URL')! + '/recommend',
@@ -97,6 +102,11 @@ export class PostsController {
         data.recommendations.map((rec) => rec.post_id),
       );
 
+    console.debug(
+      'recommendedPostsIds',
+      JSON.stringify(recommendedPostsIds, null, 2),
+    );
+
     const posts = await Promise.all(
       recommendedPostsIds.map(async (postId: string) => {
         try {
@@ -110,7 +120,7 @@ export class PostsController {
       }),
     );
 
-    return posts.filter((post) => post !== null);
+    return posts.filter(Boolean);
   }
 
   @Get(':uuid')
