@@ -17,6 +17,7 @@ const configSchema = z.object({
 
   RECOMMENDATION_API_URL: z.string().url(),
   RECOMMENDATION_API_KEY: z.string(),
+  CALLBACK_API_URL: z.string().url(),
 });
 
 export default configSchema;

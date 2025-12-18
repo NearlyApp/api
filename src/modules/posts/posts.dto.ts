@@ -1,3 +1,4 @@
+import { RecommendationStatus } from '@/types/Recommendation';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
@@ -97,4 +98,21 @@ export class UpdatePostDto {
     maxLength: 2000,
   })
   content: string;
+}
+
+export class UpdatePostStatusDto {
+  @IsUUID()
+  @ApiProperty({
+    description: 'UUID of the post',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  post_id: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @ApiProperty({
+    description: 'New status of the post',
+    example: 'PROCESSED',
+  })
+  status: RecommendationStatus;
 }
