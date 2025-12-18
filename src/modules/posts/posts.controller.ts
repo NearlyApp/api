@@ -69,7 +69,7 @@ export class PostsController {
         },
         body: JSON.stringify({
           // mock location and distance for now
-          distance: '100km',
+          distance: '5000km',
           location: {
             lat: 90,
             lon: 45,
