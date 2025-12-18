@@ -66,6 +66,28 @@ export class CreatePostDto {
   alt: Nullable<number>;
 }
 
+export class RecommendPostsQueryDto {
+  @IsLatitude()
+  @Type(() => Number)
+  @ApiProperty({
+    description: 'Latitude coordinate',
+    example: 48.8566,
+    minimum: -90,
+    maximum: 90,
+  })
+  lat: number;
+
+  @IsLongitude()
+  @Type(() => Number)
+  @ApiProperty({
+    description: 'Longitude coordinate',
+    example: 2.3522,
+    minimum: -180,
+    maximum: 180,
+  })
+  lng: number;
+}
+
 export class GetPostsQueryDto {
   @IsInt()
   @IsOptional()

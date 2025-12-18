@@ -21,6 +21,7 @@ import { Request } from 'express';
 import {
   CreatePostDto,
   GetPostsQueryDto,
+  RecommendPostsQueryDto,
   UpdatePostDto,
   UpdatePostStatusDto,
 } from './posts.dto';
@@ -50,14 +51,9 @@ export class PostsController {
 
   @Get('/recommend')
   @HttpCode(HttpStatus.OK)
-  async recommendPosts() {
+  async recommendPosts(@Query() query: RecommendPostsQueryDto) {
     // Seed for recommendation
     const firstRandomPosts = await this.postsService.getRandomPosts(5);
-
-    console.debug(
-      'firstRandomPosts',
-      JSON.stringify(firstRandomPosts, null, 2),
-    );
 
     const recommendedPostsResult = await fetch(
       this.configService.get('RECOMMENDATION_API_URL')! + '/recommend',
@@ -69,10 +65,10 @@ export class PostsController {
         },
         body: JSON.stringify({
           // mock location and distance for now
-          distance: '5000km',
+          distance: '100km',
           location: {
-            lat: 90,
-            lon: 45,
+            lat: query.lat,
+            lon: query.lng,
           },
           candidates: firstRandomPosts.map((post) => ({
             post_id: post.uuid,
@@ -96,21 +92,11 @@ export class PostsController {
       throw new UnauthorizedException('Failed to get recommendations');
     }
 
-    console.debug(
-      'recommendedPostsResult',
-      JSON.stringify(recommendedPostsResult, null, 2),
-    );
-
     const recommendedPostsIds: string[] = await recommendedPostsResult
       .json()
       .then((data: { recommendations: Recommendation[] }) =>
         data.recommendations.map((rec) => rec.post_id),
       );
-
-    console.debug(
-      'recommendedPostsIds',
-      JSON.stringify(recommendedPostsIds, null, 2),
-    );
 
     const posts = await Promise.all(
       recommendedPostsIds.map(async (postId: string) => {
