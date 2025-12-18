@@ -96,6 +96,11 @@ export class PostsController {
       throw new UnauthorizedException('Failed to get recommendations');
     }
 
+    console.debug(
+      'recommendedPostsResult',
+      JSON.stringify(recommendedPostsResult, null, 2),
+    );
+
     const recommendedPostsIds: string[] = await recommendedPostsResult
       .json()
       .then((data: { recommendations: Recommendation[] }) =>
