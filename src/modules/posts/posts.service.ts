@@ -1,6 +1,7 @@
 import { PaginatedResult } from '@/types/pagination';
 import { RecommendationStatus } from '@/types/Recommendation';
 import { ConfigService } from '@config/config.service';
+import { LikesService } from '@modules/likes/likes.service';
 import { BasePost, Post } from '@nearlyapp/common';
 import {
   BadRequestException,
@@ -17,6 +18,7 @@ export const MAX_POSTS_PER_PAGE = 1000;
 export class PostsService {
   constructor(
     private readonly postsRepository: PostsRepository,
+    private readonly likesService: LikesService,
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
   ) {}
@@ -51,7 +53,7 @@ export class PostsService {
     ]);
 
     return {
-      posts: posts.map((post) => this.formatPost(post)),
+      posts: await Promise.all(posts.map((post) => this.formatPost(post))),
       pagination: {
         page: query.page ?? 1,
         limit,
@@ -75,7 +77,7 @@ export class PostsService {
     ]);
 
     return {
-      posts: posts.map((post) => this.formatPost(post)),
+      posts: await Promise.all(posts.map((post) => this.formatPost(post))),
       pagination: {
         page: query.page ?? 1,
         limit,
@@ -217,10 +219,12 @@ export class PostsService {
   // Seed for random posts
   async getRandomPosts(count: number): Promise<Post[]> {
     const posts = await this.postsRepository.getRandomPosts(count);
-    return posts.map((p) => this.formatPost(p));
+    return Promise.all(posts.map((p) => this.formatPost(p)));
   }
 
-  formatPost(post: BasePost): Post {
+  async formatPost(post: BasePost, userUuid?: string): Promise<Post> {
+    const likes = await this.likesService.populatePostLike(post.uuid, userUuid);
+
     return {
       uuid: post.uuid,
       authorUuid: post.authorUuid,
@@ -231,7 +235,7 @@ export class PostsService {
         lng: post.lng,
         alt: post.alt,
       },
-      likes: 0,
+      likes,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
       deletedAt: post.deletedAt,
