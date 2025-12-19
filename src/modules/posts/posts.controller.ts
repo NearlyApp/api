@@ -111,16 +111,4 @@ export class PostsController {
 
     return this.postsService.deletePost(uuid);
   }
-
-  // @Delete()
-  // @HttpCode(HttpStatus.NO_CONTENT)
-  // async deleteAllPost(@Req() req: Request) {
-  //   const user = req.user
-  //     ? this.usersService.getUserByUUID(req.user.uuid)
-  //     : null;
-  //   if (!user) throw new UnauthorizedException('You are not authenticated');
-
-  //   const uuid = (await user).uuid;
-  //   return this.postsService.deleteAll(uuid);
-  // }
 }
