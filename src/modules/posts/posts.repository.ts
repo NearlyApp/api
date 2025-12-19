@@ -31,7 +31,6 @@ export class PostsRepository extends BaseRepository<typeof postsSchema> {
     }
   }
 
-  // Seed for random posts
   async getRandomPosts(
     userUuid: Nullable<string>,
     limit: number,
