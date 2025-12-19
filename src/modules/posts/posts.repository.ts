@@ -3,7 +3,7 @@ import { DrizzleService } from '@drizzle/drizzle.service';
 import { BasePost } from '@nearlyapp/common';
 import { postsSchema } from '@nearlyapp/common/schemas';
 import { Injectable } from '@nestjs/common';
-import { eq, SQL, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 @Injectable()
 export class PostsRepository extends BaseRepository<typeof postsSchema> {
@@ -36,12 +36,11 @@ export class PostsRepository extends BaseRepository<typeof postsSchema> {
     limit: number,
   ): Promise<BasePost[]> {
     const where = userUuid
-      ? (
-          eq(postsSchema.status, 'PROCESSED') as SQL<BasePost> & {
-            and: (clause: SQL<BasePost>) => SQL<BasePost>;
-          }
-        ).and(eq(postsSchema.authorUuid, userUuid) as SQL<BasePost>)
-      : (eq(postsSchema.status, 'PROCESSED') as SQL<BasePost>);
+      ? and(
+          eq(postsSchema.status, 'PROCESSED'),
+          eq(postsSchema.authorUuid, userUuid),
+        )
+      : eq(postsSchema.status, 'PROCESSED');
 
     return this.db
       .select()
