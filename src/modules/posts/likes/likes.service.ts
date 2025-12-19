@@ -1,6 +1,10 @@
 import { PaginatedResult } from '@/types/pagination';
 import { Like } from '@nearlyapp/common';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PostsRepository } from '@posts/posts.repository';
 import { UsersService } from '@users/users.service';
 import { GetLikesQueryDto } from './likes.dto';
@@ -86,12 +90,12 @@ export class LikesService {
     if (!user)
       throw new NotFoundException(`User with UUID ${userUuid} not found`);
 
-    const existingLike = await this.getLikeByPostAndUserUUID(
-      postUuid,
-      userUuid,
-    );
+    const existingLike = await this.likesRepository.findOne({
+      parentPostUuid: postUuid,
+      authorUuid: userUuid,
+    });
 
-    if (existingLike) throw new Error('Like already exists');
+    if (existingLike) throw new BadRequestException('Like already exists');
 
     return this.likesRepository.create({
       parentPostUuid: postUuid,

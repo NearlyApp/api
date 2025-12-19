@@ -30,10 +30,10 @@ export class PostsService {
     private readonly configService: ConfigService,
   ) {}
 
-  async getPostByUUID(uuid: string): Promise<Post> {
+  async getPostByUUID(uuid: string, userUuid?: string): Promise<Post> {
     const post = await this.postsRepository.findByUUID(uuid);
     if (!post) throw new NotFoundException(`Post with UUID ${uuid} not found`);
-    return this.formatPost(post);
+    return this.formatPost(post, userUuid);
   }
 
   async getPostsByAuthor(

@@ -59,8 +59,9 @@ export class PostsController {
   }
 
   @Get(':uuid')
-  async getPost(@Param('uuid') uuid: string) {
-    return this.postsService.getPostByUUID(uuid);
+  async getPost(@Req() req: Request, @Param('uuid') uuid: string) {
+    const user = req.user;
+    return this.postsService.getPostByUUID(uuid, user?.uuid);
   }
 
   @Get('author/:uuid')
