@@ -71,13 +71,13 @@ export class LikesService {
   async getLikeByPostAndUserUUID(
     postUuid: string,
     userUuid: string,
-  ): Promise<Like> {
+  ): Promise<Nullable<Like>> {
     const like = await this.likesRepository.findOne({
       parentPostUuid: postUuid,
       authorUuid: userUuid,
     });
 
-    if (!like) throw new NotFoundException(`Like not found`);
+    // if (!like) throw new NotFoundException(`Like not found`);
     return like;
   }
 
