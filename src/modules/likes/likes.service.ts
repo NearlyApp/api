@@ -127,7 +127,7 @@ export class LikesService {
 
   async populatePostLike(
     postUuid: string,
-    userUuid?: string,
+    userUuid?: Nullable<string>,
   ): Promise<{ count: number; isLikedByUser: boolean }> {
     const count = (await this.getPostLikesCount(postUuid)) ?? 0;
     const isLikedByUser = userUuid

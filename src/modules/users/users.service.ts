@@ -82,7 +82,10 @@ export class UsersService {
   }
 
   async createUser(
-    data: Omit<BaseUser, 'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt'>,
+    data: Omit<
+      BaseUser,
+      'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt' | 'searchRadiusMeters'
+    >,
   ): Promise<User> {
     if (BANNED_USERNAMES.includes(data.username))
       throw new BadRequestException({

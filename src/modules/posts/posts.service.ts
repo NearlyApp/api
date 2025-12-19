@@ -1,16 +1,23 @@
 import { PaginatedResult } from '@/types/pagination';
-import { RecommendationStatus } from '@/types/Recommendation';
+import { Recommendation, RecommendationStatus } from '@/types/Recommendation';
 import { ConfigService } from '@config/config.service';
 import { LikesService } from '@modules/likes/likes.service';
 import { BasePost, Post } from '@nearlyapp/common';
+import { SEARCH_RADIUS_METERS_DEFAULT } from '@nearlyapp/common/schemas/users';
 import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { RECOMMENDATION_RANDOM_POSTS_COUNT } from '@posts/posts.constants';
 import { UsersService } from '@users/users.service';
-import { CreatePostDto, GetPostsQueryDto, UpdatePostDto } from './posts.dto';
+import {
+  CreatePostDto,
+  GetPostsQueryDto,
+  RecommendPostsQueryDto,
+  UpdatePostDto,
+} from './posts.dto';
 import { PostsRepository } from './posts.repository';
 
 export const MAX_POSTS_PER_PAGE = 1000;
@@ -217,12 +224,91 @@ export class PostsService {
   }
 
   // Seed for random posts
-  async getRandomPosts(count: number): Promise<Post[]> {
-    const posts = await this.postsRepository.getRandomPosts(count);
-    return Promise.all(posts.map((p) => this.formatPost(p)));
+  async getRandomPosts(
+    userUuid: Nullable<string>,
+    count: number,
+  ): Promise<Post[]> {
+    const posts = await this.postsRepository.getRandomPosts(userUuid, count);
+    return await Promise.all(posts.map((p) => this.formatPost(p, userUuid)));
   }
 
-  async formatPost(post: BasePost, userUuid?: string): Promise<Post> {
+  async getRecommendedPosts(
+    query: RecommendPostsQueryDto,
+    userUuid: Nullable<string> = null,
+    searchRadiusMeters: number = SEARCH_RADIUS_METERS_DEFAULT,
+  ): Promise<Post[]> {
+    const candidatePosts = await this.getRandomPosts(
+      userUuid,
+      RECOMMENDATION_RANDOM_POSTS_COUNT,
+    );
+
+    const recommendedPostsResult = await fetch(
+      this.configService.get('RECOMMENDATION_API_URL')! + '/recommend',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
+        },
+        body: JSON.stringify({
+          // user_uuid: userUuid,
+          distance: this.convertSearchRadiusToDistance(searchRadiusMeters),
+          location: {
+            lat: query.lat,
+            lon: query.lng,
+          },
+          candidates: candidatePosts.map((post) => ({
+            post_id: post.uuid,
+            metadata: {
+              location: {
+                lat: post.coords.lat,
+                lon: post.coords.lng,
+              },
+            },
+            text: post.content,
+          })),
+        }),
+      },
+    );
+
+    if (!recommendedPostsResult.ok) {
+      const errorBody: string = await recommendedPostsResult.text();
+      console.error(
+        `Failed to get recommendations: ${recommendedPostsResult.status}\n${errorBody}`,
+      );
+      throw new InternalServerErrorException('Failed to get recommendations');
+    }
+
+    const recommendedPostsIds: string[] = await recommendedPostsResult
+      .json()
+      .then((data: { recommendations: Recommendation[] }) =>
+        data.recommendations.map((rec) => rec.post_id),
+      );
+
+    const posts = await Promise.all(
+      recommendedPostsIds.map(async (postId: string) => {
+        try {
+          return await this.getPostByUUID(postId);
+        } catch (err) {
+          if (err instanceof NotFoundException) {
+            return null;
+          }
+          throw err;
+        }
+      }),
+    );
+
+    return posts.filter(
+      (post): post is Post => post !== null && post.authorUuid !== userUuid,
+    );
+  }
+
+  private convertSearchRadiusToDistance(searchRadiusMeters: number): string {
+    const km = Math.round(searchRadiusMeters / 1000);
+    return `${km}km`;
+  }
+
+  async formatPost(post: BasePost, userUuid?: Nullable<string>): Promise<Post> {
     const likes = await this.likesService.populatePostLike(post.uuid, userUuid);
 
     return {
