@@ -249,7 +249,7 @@ export class PostsService {
           'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
         },
         body: JSON.stringify({
-          user_uuid: userUuid,
+          // user_uuid: userUuid,
           distance: this.convertSearchRadiusToDistance(searchRadiusMeters),
           location: {
             lat: query.lat,
