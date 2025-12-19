@@ -1,4 +1,3 @@
-import { Recommendation } from '@/types/Recommendation';
 import {
   Body,
   Controller,
@@ -7,7 +6,6 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  NotFoundException,
   Param,
   Patch,
   Post,
@@ -15,8 +13,6 @@ import {
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { UsersService } from '@users/users.service';
 import { Request } from 'express';
 import {
   CreatePostDto,
@@ -29,11 +25,7 @@ import { PostsService } from './posts.service';
 
 @Controller('posts')
 export class PostsController {
-  constructor(
-    private readonly postsService: PostsService,
-    private readonly usersService: UsersService,
-    private readonly configService: ConfigService,
-  ) {}
+  constructor(private readonly postsService: PostsService) {}
 
   @Get()
   async getPosts(@Query() query: GetPostsQueryDto) {
@@ -51,67 +43,19 @@ export class PostsController {
 
   @Get('/recommend')
   @HttpCode(HttpStatus.OK)
-  async recommendPosts(@Query() query: RecommendPostsQueryDto) {
-    // Seed for recommendation
-    const firstRandomPosts = await this.postsService.getRandomPosts(5);
-
-    const recommendedPostsResult = await fetch(
-      this.configService.get('RECOMMENDATION_API_URL')! + '/recommend',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
-        },
-        body: JSON.stringify({
-          // mock location and distance for now
-          distance: '100km',
-          location: {
-            lat: query.lat,
-            lon: query.lng,
-          },
-          candidates: firstRandomPosts.map((post) => ({
-            post_id: post.uuid,
-            metadata: {
-              location: {
-                lat: post.coords.lat,
-                lon: post.coords.lng,
-              },
-            },
-            text: post.content,
-          })),
-        }),
-      },
+  async recommendPosts(
+    @Query() query: RecommendPostsQueryDto,
+    @Req() req: Request,
+  ) {
+    const posts = await this.postsService.getRecommendedPosts(
+      query,
+      req.user?.uuid,
+      req.user?.searchRadiusMeters,
     );
 
-    if (!recommendedPostsResult.ok) {
-      const errorBody: string = await recommendedPostsResult.text();
-      console.error(
-        `Failed to get recommendations: ${recommendedPostsResult.status}\n${errorBody}`,
-      );
-      throw new UnauthorizedException('Failed to get recommendations');
-    }
-
-    const recommendedPostsIds: string[] = await recommendedPostsResult
-      .json()
-      .then((data: { recommendations: Recommendation[] }) =>
-        data.recommendations.map((rec) => rec.post_id),
-      );
-
-    const posts = await Promise.all(
-      recommendedPostsIds.map(async (postId: string) => {
-        try {
-          return await this.postsService.getPostByUUID(postId);
-        } catch (err) {
-          if (err instanceof NotFoundException) {
-            return null;
-          }
-          throw err;
-        }
-      }),
-    );
-
-    return posts.filter(Boolean);
+    return {
+      posts,
+    };
   }
 
   @Get(':uuid')

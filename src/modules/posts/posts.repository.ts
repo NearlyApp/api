@@ -1,8 +1,9 @@
 import { BaseRepository, FindOptions } from '@drizzle/base.repository';
 import { DrizzleService } from '@drizzle/drizzle.service';
+import { BasePost } from '@nearlyapp/common';
 import { postsSchema } from '@nearlyapp/common/schemas';
 import { Injectable } from '@nestjs/common';
-import { eq, sql } from 'drizzle-orm';
+import { eq, SQL, sql } from 'drizzle-orm';
 
 @Injectable()
 export class PostsRepository extends BaseRepository<typeof postsSchema> {
@@ -31,11 +32,22 @@ export class PostsRepository extends BaseRepository<typeof postsSchema> {
   }
 
   // Seed for random posts
-  async getRandomPosts(limit: number) {
+  async getRandomPosts(
+    userUuid: Nullable<string>,
+    limit: number,
+  ): Promise<BasePost[]> {
+    const where = userUuid
+      ? (
+          eq(postsSchema.status, 'PROCESSED') as SQL<BasePost> & {
+            and: (clause: SQL<BasePost>) => SQL<BasePost>;
+          }
+        ).and(eq(postsSchema.authorUuid, userUuid) as SQL<BasePost>)
+      : (eq(postsSchema.status, 'PROCESSED') as SQL<BasePost>);
+
     return this.db
       .select()
       .from(postsSchema)
-      .where(eq(postsSchema.status, 'PROCESSED'))
+      .where(where)
       .orderBy(sql`RANDOM()`)
       .limit(limit);
   }
