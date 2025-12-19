@@ -1,7 +1,6 @@
 import { PaginatedResult } from '@/types/pagination';
 import { Recommendation, RecommendationStatus } from '@/types/Recommendation';
 import { ConfigService } from '@config/config.service';
-import { LikesService } from '@modules/likes/likes.service';
 import { BasePost, Post } from '@nearlyapp/common';
 import { SEARCH_RADIUS_METERS_DEFAULT } from '@nearlyapp/common/schemas/users';
 import {
@@ -10,6 +9,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import { LikesService } from '@posts/likes/likes.service';
 import { RECOMMENDATION_RANDOM_POSTS_COUNT } from '@posts/posts.constants';
 import { UsersService } from '@users/users.service';
 import {
