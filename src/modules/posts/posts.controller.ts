@@ -69,18 +69,6 @@ export class PostsController {
     return this.postsService.formatPost(post);
   }
 
-  @Get('author/:uuid')
-  async getPostsByAuthor(
-    @Query() query: GetPostsQueryDto,
-    @Param('uuid') uuid: string,
-  ) {
-    const result = await this.postsService.getPostsByAuthor(query, uuid);
-    return {
-      posts: result.posts.map((post) => this.postsService.formatPost(post)),
-      pagination: result.pagination,
-    };
-  }
-
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createPost(@Req() req: Request, @Body() createPostDto: CreatePostDto) {

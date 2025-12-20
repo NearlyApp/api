@@ -9,12 +9,17 @@ import {
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
+import { GetPostsQueryDto } from '@posts/posts.dto';
+import { PostsService } from '@posts/posts.service';
 import { GetUsersQueryDto } from '@users/users.dtos';
 import { Request } from 'express';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly postsService: PostsService,
+  ) {}
 
   @Get('me')
   @HttpCode(HttpStatus.OK)
@@ -33,6 +38,19 @@ export class UsersController {
   async getUser(@Param('uuid') uuid: string) {
     const user = await this.usersService.getUserByUUID(uuid);
     return this.usersService.formatPublicUser(user);
+  }
+
+  @Get(':uuid/posts')
+  @HttpCode(HttpStatus.OK)
+  async getUserPosts(
+    @Param('uuid') uuid: string,
+    @Query() query: GetPostsQueryDto,
+  ) {
+    const result = await this.postsService.getPostsByAuthor(query, uuid);
+    return {
+      posts: result.posts.map((post) => this.postsService.formatPost(post)),
+      pagination: result.pagination,
+    };
   }
 
   @Get()
