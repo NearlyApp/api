@@ -1,7 +1,7 @@
 import { PaginatedResult } from '@/types/pagination';
 import { Recommendation, RecommendationStatus } from '@/types/Recommendation';
 import { ConfigService } from '@config/config.service';
-import { BasePost, Post } from '@nearlyapp/common';
+import { Post, PostEntity } from '@nearlyapp/common';
 import { SEARCH_RADIUS_METERS_DEFAULT } from '@nearlyapp/common/schemas/users';
 import {
   BadRequestException,
@@ -14,7 +14,7 @@ import { UsersService } from '@users/users.service';
 import {
   CreatePostDto,
   GetPostsQueryDto,
-  RecommendPostsQueryDto,
+  GetRecommendPostsQueryDto,
   UpdatePostDto,
 } from './posts.dto';
 import { PostsRepository } from './posts.repository';
@@ -28,16 +28,16 @@ export class PostsService {
     private readonly configService: ConfigService,
   ) {}
 
-  async getPostByUUID(uuid: string): Promise<Post> {
+  async getPostByUUID(uuid: string): Promise<PostEntity> {
     const post = await this.postsRepository.findByUUID(uuid);
     if (!post) throw new NotFoundException(`Post with UUID ${uuid} not found`);
-    return this.formatPost(post);
+    return post;
   }
 
   async getPostsByAuthor(
     query: GetPostsQueryDto,
     uuid: string,
-  ): Promise<PaginatedResult<Post, 'posts'>> {
+  ): Promise<PaginatedResult<PostEntity, 'posts'>> {
     const user = await this.usersService.getUserByUUID(uuid);
     if (!user) throw new NotFoundException(`User ${uuid} not found`);
 
@@ -58,7 +58,7 @@ export class PostsService {
     ]);
 
     return {
-      posts: posts.map((post) => this.formatPost(post)),
+      posts,
       pagination: {
         page: query.page ?? 1,
         limit,
@@ -70,7 +70,7 @@ export class PostsService {
 
   async getPosts(
     query: GetPostsQueryDto,
-  ): Promise<PaginatedResult<Post, 'posts'>> {
+  ): Promise<PaginatedResult<PostEntity, 'posts'>> {
     const { limit, offset } = this.postsRepository.getPaginationParams(
       query,
       MAX_POSTS_PER_PAGE,
@@ -82,7 +82,7 @@ export class PostsService {
     ]);
 
     return {
-      posts: posts.map((post) => this.formatPost(post)),
+      posts,
       pagination: {
         page: query.page ?? 1,
         limit,
@@ -92,7 +92,7 @@ export class PostsService {
     };
   }
 
-  async createPost(userUuid: string, data: CreatePostDto): Promise<Post> {
+  async createPost(userUuid: string, data: CreatePostDto): Promise<PostEntity> {
     const author = await this.usersService.getUserByUUID(userUuid);
     if (!author) {
       throw new NotFoundException(`Author with UUID ${userUuid} not found`);
@@ -147,6 +147,7 @@ export class PostsService {
         }),
       },
     );
+
     if (!ingestResult.ok) {
       const errorBody: string = await ingestResult.text();
       console.error(
@@ -157,20 +158,21 @@ export class PostsService {
       await this.postsRepository.delete({ uuid: post.uuid });
       throw new InternalServerErrorException('Failed to process post');
     }
-    return this.formatPost(post);
+
+    return post;
   }
 
-  async updatePost(uuid: string, data: UpdatePostDto): Promise<Post> {
+  async updatePost(uuid: string, data: UpdatePostDto): Promise<PostEntity> {
     const updatedPosts = await this.postsRepository.update({ uuid }, data);
     if (!updatedPosts || updatedPosts.length === 0)
       throw new NotFoundException(`Post with UUID ${uuid} not found`);
-    return this.formatPost(updatedPosts[0]);
+    return updatedPosts[0];
   }
 
   async updateStatusPost(
     uuid: string,
     status: RecommendationStatus,
-  ): Promise<Post> {
+  ): Promise<PostEntity> {
     const updatedPosts = await this.postsRepository.update(
       { uuid },
       {
@@ -179,7 +181,7 @@ export class PostsService {
     );
     if (!updatedPosts || updatedPosts.length === 0)
       throw new NotFoundException(`Post with UUID ${uuid} not found`);
-    return this.formatPost(updatedPosts[0]);
+    return updatedPosts[0];
   }
 
   async deletePost(uuid: string): Promise<void> {
@@ -225,16 +227,16 @@ export class PostsService {
   async getRandomPosts(
     userUuid: Nullable<string>,
     count: number,
-  ): Promise<Post[]> {
+  ): Promise<PostEntity[]> {
     const posts = await this.postsRepository.getRandomPosts(userUuid, count);
-    return posts.map((p) => this.formatPost(p));
+    return posts;
   }
 
   async getRecommendedPosts(
-    query: RecommendPostsQueryDto,
+    query: GetRecommendPostsQueryDto,
     userUuid: Nullable<string> = null,
     searchRadiusMeters: number = SEARCH_RADIUS_METERS_DEFAULT,
-  ): Promise<Post[]> {
+  ): Promise<PostEntity[]> {
     const candidatePosts = await this.getRandomPosts(
       userUuid,
       RECOMMENDATION_RANDOM_POSTS_COUNT,
@@ -259,8 +261,8 @@ export class PostsService {
             post_id: post.uuid,
             metadata: {
               location: {
-                lat: post.coords.lat,
-                lon: post.coords.lng,
+                lat: post.lat,
+                lon: post.lng,
               },
             },
             text: post.content,
@@ -297,16 +299,19 @@ export class PostsService {
     );
 
     return posts.filter(
-      (post): post is Post => post !== null && post.authorUuid !== userUuid,
+      (post): post is PostEntity =>
+        post !== null && post.authorUuid !== userUuid,
     );
   }
 
-  private convertSearchRadiusToDistance(searchRadiusMeters: number): string {
+  private convertSearchRadiusToDistance(
+    searchRadiusMeters: number,
+  ): `${number}km` {
     const km = Math.round(searchRadiusMeters / 1000);
     return `${km}km`;
   }
 
-  formatPost(post: BasePost): Post {
+  formatPost(post: PostEntity): Post {
     return {
       uuid: post.uuid,
       authorUuid: post.authorUuid,
@@ -317,7 +322,10 @@ export class PostsService {
         lng: post.lng,
         alt: post.alt,
       },
-      likes: 0,
+      likes: {
+        count: 0,
+        isLikedByUser: false,
+      },
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
       deletedAt: post.deletedAt,
