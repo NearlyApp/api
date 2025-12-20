@@ -1,8 +1,8 @@
 import { RecommendationStatus } from '@/types/Recommendation';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
-  IsBooleanString,
+  IsBoolean,
   IsInt,
   IsLatitude,
   IsLongitude,
@@ -81,13 +81,14 @@ export class GetRecommendPostsQueryDto {
   })
   lng: number;
 
-  @IsBooleanString()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
   @IsOptional()
   @ApiPropertyOptional({
     description: 'Whether to include author in the response',
-    example: 'true',
+    example: true,
   })
-  withAuthor: boolean = true;
+  withAuthor?: boolean = false;
 }
 
 export class GetPostsQueryDto {
@@ -111,13 +112,14 @@ export class GetPostsQueryDto {
   })
   limit?: number;
 
-  @IsBooleanString()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
   @IsOptional()
   @ApiPropertyOptional({
     description: 'Whether to include author in the response',
-    example: 'true',
+    example: true,
   })
-  withAuthor: boolean = true;
+  withAuthor?: boolean = false;
 }
 
 export class UpdatePostDto {
