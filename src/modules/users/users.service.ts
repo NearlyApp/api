@@ -1,6 +1,11 @@
 import type { PaginatedResult } from '@/types/pagination';
 import { UsersRepository } from '@modules/users/users.repository';
-import { BaseUser, User } from '@nearlyapp/common';
+import {
+  MinimalUser,
+  PrivateUser,
+  PublicUser,
+  UserEntity,
+} from '@nearlyapp/common';
 import {
   BadRequestException,
   ConflictException,
@@ -17,7 +22,10 @@ export const MAX_USERS_PER_PAGE = 1000;
 export class UsersService {
   constructor(private readonly usersRepository: UsersRepository) {}
 
-  async validateUser(login: string, password: string): Promise<Nullable<User>> {
+  async validateUser(
+    login: string,
+    password: string,
+  ): Promise<Nullable<UserEntity>> {
     const user = (
       await Promise.all([
         this.usersRepository.findByUsername(login),
@@ -28,35 +36,35 @@ export class UsersService {
     if (!user || !user.password || !bcrypt.compareSync(password, user.password))
       return null;
 
-    return this.formatUser(user);
+    return user;
   }
 
-  async getUserByUUID(uuid: string): Promise<User> {
+  async getUserByUUID(uuid: string): Promise<UserEntity> {
     const user = await this.usersRepository.findByUUID(uuid);
     if (!user) throw new NotFoundException(`User with UUID ${uuid} not found`);
 
-    return this.formatUser(user);
+    return user;
   }
 
-  async getUserByEmail(email: string): Promise<User> {
+  async getUserByEmail(email: string): Promise<UserEntity> {
     const user = await this.usersRepository.findByEmail(email);
     if (!user)
       throw new NotFoundException(`User with email ${email} not found`);
 
-    return this.formatUser(user);
+    return user;
   }
 
-  async getUserByUsername(username: string): Promise<User> {
+  async getUserByUsername(username: string): Promise<UserEntity> {
     const user = await this.usersRepository.findByUsername(username);
     if (!user)
       throw new NotFoundException(`User with username ${username} not found`);
 
-    return this.formatUser(user);
+    return user;
   }
 
   async getUsers(
     query: GetUsersQueryDto,
-  ): Promise<PaginatedResult<User, 'users'>> {
+  ): Promise<PaginatedResult<UserEntity, 'users'>> {
     const { limit, offset } = this.usersRepository.getPaginationParams(
       query,
       MAX_USERS_PER_PAGE,
@@ -71,7 +79,7 @@ export class UsersService {
     ]);
 
     return {
-      users: users.map((user) => this.formatUser(user)),
+      users,
       pagination: {
         page: query.page ?? 1,
         limit,
@@ -83,10 +91,10 @@ export class UsersService {
 
   async createUser(
     data: Omit<
-      BaseUser,
+      UserEntity,
       'uuid' | 'createdAt' | 'updatedAt' | 'deletedAt' | 'searchRadiusMeters'
     >,
-  ): Promise<User> {
+  ): Promise<UserEntity> {
     if (BANNED_USERNAMES.includes(data.username))
       throw new BadRequestException({
         statusCode: 400,
@@ -128,13 +136,35 @@ export class UsersService {
       password: hashedPassword,
     });
 
-    return this.formatUser(user);
+    return user;
   }
 
-  formatUser(user: BaseUser): User {
+  formatMinimalUser(user: UserEntity): MinimalUser {
     return {
-      ...user,
+      uuid: user.uuid,
+      username: user.username,
       displayName: user.displayName || user.username,
+      avatarUrl: user.avatarUrl,
+    };
+  }
+
+  formatPublicUser(user: UserEntity): PublicUser {
+    return {
+      ...this.formatMinimalUser(user),
+      biography: user.biography,
+      bannerUrl: user.bannerUrl,
+      profilePrivacyLevel: user.profilePrivacyLevel,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      deletedAt: user.deletedAt,
+    };
+  }
+
+  formatPrivateUser(user: UserEntity): PrivateUser {
+    return {
+      ...this.formatPublicUser(user),
+      email: user.email,
+      searchRadiusMeters: user.searchRadiusMeters,
     };
   }
 }

@@ -9,34 +9,60 @@ import {
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
+import { GetPostsQueryDto } from '@posts/posts.dto';
+import { PostsService } from '@posts/posts.service';
 import { GetUsersQueryDto } from '@users/users.dtos';
 import { Request } from 'express';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly postsService: PostsService,
+  ) {}
 
   @Get('me')
   @HttpCode(HttpStatus.OK)
-  getMe(@Req() req: Request) {
+  async getMe(@Req() req: Request) {
     const user = req.user
-      ? this.usersService.getUserByUUID(req.user.uuid)
+      ? await this.usersService.getUserByUUID(req.user.uuid)
       : null;
 
     if (!user) throw new UnauthorizedException('You are not authenticated');
 
-    return user;
+    return this.usersService.formatPrivateUser(user);
   }
 
   @Get(':uuid')
   @HttpCode(HttpStatus.OK)
   async getUser(@Param('uuid') uuid: string) {
-    return this.usersService.getUserByUUID(uuid);
+    const user = await this.usersService.getUserByUUID(uuid);
+    return this.usersService.formatPublicUser(user);
+  }
+
+  @Get(':uuid/posts')
+  @HttpCode(HttpStatus.OK)
+  async getUserPosts(
+    @Param('uuid') uuid: string,
+    @Query() query: GetPostsQueryDto,
+  ) {
+    const result = await this.postsService.getPostsByAuthor(query, uuid);
+    return {
+      posts: result.posts.map((post) => this.postsService.formatPost(post)),
+      pagination: result.pagination,
+    };
   }
 
   @Get()
   @HttpCode(HttpStatus.OK)
   async getUsers(@Query() query: GetUsersQueryDto) {
-    return this.usersService.getUsers(query);
+    const result = await this.usersService.getUsers(query);
+
+    return {
+      users: result.users.map((user) =>
+        this.usersService.formatPublicUser(user),
+      ),
+      pagination: result.pagination,
+    };
   }
 }

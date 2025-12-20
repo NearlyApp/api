@@ -26,7 +26,7 @@ export class AuthService {
         req.session.cookie.expires = new Date(Date.now() + SESSION_TIMEOUT_MS);
       }
 
-      return res.send(req.user);
+      return res.send(this.usersService.formatPrivateUser(req.user!));
     });
   }
 
@@ -47,7 +47,7 @@ export class AuthService {
     return req.login(user, (error) => {
       if (error) throw error;
 
-      return res.send(user);
+      return res.send(this.usersService.formatPrivateUser(user));
     });
   }
 

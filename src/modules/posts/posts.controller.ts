@@ -17,7 +17,7 @@ import { Request } from 'express';
 import {
   CreatePostDto,
   GetPostsQueryDto,
-  RecommendPostsQueryDto,
+  GetRecommendPostsQueryDto,
   UpdatePostDto,
   UpdatePostStatusDto,
 } from './posts.dto';
@@ -28,23 +28,33 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Get()
-  async getPosts(@Query() query: GetPostsQueryDto) {
-    return this.postsService.getPosts(query);
+  async getPosts(@Req() req: Request, @Query() query: GetPostsQueryDto) {
+    const result = await this.postsService.getPosts(query);
+    const formattedPosts = await Promise.all(
+      result.posts.map((post) =>
+        this.postsService.formatPost(post, req.user?.uuid),
+      ),
+    );
+    return {
+      posts: formattedPosts,
+      pagination: result.pagination,
+    };
   }
 
   @Post('/callback/')
   @HttpCode(HttpStatus.OK)
-  updatePostStatus(@Body() updatePostDto: UpdatePostStatusDto) {
-    return this.postsService.updateStatusPost(
+  async updatePostStatus(@Body() updatePostDto: UpdatePostStatusDto) {
+    const post = await this.postsService.updateStatusPost(
       updatePostDto.post_id,
       updatePostDto.status,
     );
+    return this.postsService.formatPost(post);
   }
 
   @Get('/recommend')
   @HttpCode(HttpStatus.OK)
   async recommendPosts(
-    @Query() query: RecommendPostsQueryDto,
+    @Query() query: GetRecommendPostsQueryDto,
     @Req() req: Request,
   ) {
     const posts = await this.postsService.getRecommendedPosts(
@@ -53,23 +63,19 @@ export class PostsController {
       req.user?.searchRadiusMeters,
     );
 
+    const formattedPosts = await Promise.all(
+      posts.map((post) => this.postsService.formatPost(post, req.user?.uuid)),
+    );
+
     return {
-      posts,
+      posts: formattedPosts,
     };
   }
 
   @Get(':uuid')
   async getPost(@Req() req: Request, @Param('uuid') uuid: string) {
-    const user = req.user;
-    return this.postsService.getPostByUUID(uuid, user?.uuid);
-  }
-
-  @Get('author/:uuid')
-  async getPostsByAuthor(
-    @Query() query: GetPostsQueryDto,
-    @Param('uuid') uuid: string,
-  ) {
-    return this.postsService.getPostsByAuthor(query, uuid);
+    const post = await this.postsService.getPostByUUID(uuid);
+    return this.postsService.formatPost(post, req.user?.uuid);
   }
 
   @Post()
@@ -78,7 +84,8 @@ export class PostsController {
     const user = req.user;
     if (!user) throw new UnauthorizedException('You are not authenticated');
 
-    return this.postsService.createPost(user.uuid, createPostDto);
+    const post = await this.postsService.createPost(user.uuid, createPostDto);
+    return this.postsService.formatPost(post);
   }
 
   @Patch(':uuid')
@@ -96,7 +103,8 @@ export class PostsController {
       throw new ForbiddenException('You can only update your own posts');
     }
 
-    return this.postsService.updatePost(uuid, updatePostDto);
+    const post = await this.postsService.updatePost(uuid, updatePostDto);
+    return this.postsService.formatPost(post);
   }
 
   @Delete(':uuid')

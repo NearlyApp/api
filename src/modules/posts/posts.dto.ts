@@ -2,6 +2,7 @@ import { RecommendationStatus } from '@/types/Recommendation';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  IsBooleanString,
   IsInt,
   IsLatitude,
   IsLongitude,
@@ -24,13 +25,6 @@ export class CreatePostDto {
     maxLength: 2000,
   })
   content: string;
-
-  // @IsUUID()
-  // @ApiProperty({
-  //   description: 'UUID of the post author',
-  //   example: '550e8400-e29b-41d4-a716-446655440000',
-  // })
-  // authorUuid: string;
 
   @IsUUID()
   @IsOptional()
@@ -66,7 +60,7 @@ export class CreatePostDto {
   alt: Nullable<number>;
 }
 
-export class RecommendPostsQueryDto {
+export class GetRecommendPostsQueryDto {
   @IsLatitude()
   @Type(() => Number)
   @ApiProperty({
@@ -86,6 +80,14 @@ export class RecommendPostsQueryDto {
     maximum: 180,
   })
   lng: number;
+
+  @IsBooleanString()
+  @IsOptional()
+  @ApiPropertyOptional({
+    description: 'Whether to include author in the response',
+    example: 'true',
+  })
+  withAuthor: boolean = true;
 }
 
 export class GetPostsQueryDto {
@@ -108,6 +110,14 @@ export class GetPostsQueryDto {
     example: 50,
   })
   limit?: number;
+
+  @IsBooleanString()
+  @IsOptional()
+  @ApiPropertyOptional({
+    description: 'Whether to include author in the response',
+    example: 'true',
+  })
+  withAuthor: boolean = true;
 }
 
 export class UpdatePostDto {

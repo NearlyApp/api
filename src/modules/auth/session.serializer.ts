@@ -1,4 +1,4 @@
-import { User } from '@nearlyapp/common';
+import { UserEntity } from '@nearlyapp/common';
 import { Injectable } from '@nestjs/common';
 import { PassportSerializer } from '@nestjs/passport';
 import { UsersService } from '@users/users.service';
@@ -9,13 +9,16 @@ export class SessionSerializer extends PassportSerializer {
     super();
   }
 
-  serializeUser(user: User, done: (err: unknown, uuid?: string) => void): void {
+  serializeUser(
+    user: UserEntity,
+    done: (err: unknown, uuid?: string) => void,
+  ): void {
     done(null, user.uuid);
   }
 
   async deserializeUser(
     uuid: string,
-    done: (err: unknown, user: Nullable<User>) => void,
+    done: (err: unknown, user: Nullable<UserEntity>) => void,
   ): Promise<void> {
     try {
       const user = await this.usersService.getUserByUUID(uuid);
