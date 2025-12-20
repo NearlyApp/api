@@ -1,4 +1,4 @@
-import { User } from '@nearlyapp/common';
+import { UserEntity } from '@nearlyapp/common';
 import {
   CallHandler,
   ExecutionContext,
@@ -28,7 +28,7 @@ export class LoggingInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap(() => {
         const duration = Date.now() - start;
-        const user: Nullable<User> = request.user;
+        const user: Nullable<UserEntity> = request.user;
 
         this.logger.log(
           `${request.method} ${request.originalUrl} ${duration}ms - requested by ${user?.email || 'ANONYMOUS'}`,
@@ -36,7 +36,7 @@ export class LoggingInterceptor implements NestInterceptor {
       }),
       catchError((error: HttpError) => {
         const duration = Date.now() - start;
-        const user: Nullable<User> = request.user;
+        const user: Nullable<UserEntity> = request.user;
         const status = error.getStatus?.() || error.status || 500;
 
         this.logger.error(
