@@ -1,7 +1,7 @@
-import { User } from '@nearlyapp/common';
+import { UserEntity } from '@nearlyapp/common';
 
 declare module 'express' {
   interface Request {
-    user: Nullable<User>;
+    user: Nullable<UserEntity>;
   }
 }

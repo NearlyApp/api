@@ -18,25 +18,33 @@ export class UsersController {
 
   @Get('me')
   @HttpCode(HttpStatus.OK)
-  getMe(@Req() req: Request) {
+  async getMe(@Req() req: Request) {
     const user = req.user
-      ? this.usersService.getUserByUUID(req.user.uuid)
+      ? await this.usersService.getUserByUUID(req.user.uuid)
       : null;
 
     if (!user) throw new UnauthorizedException('You are not authenticated');
 
-    return user;
+    return this.usersService.formatPrivateUser(user);
   }
 
   @Get(':uuid')
   @HttpCode(HttpStatus.OK)
   async getUser(@Param('uuid') uuid: string) {
-    return this.usersService.getUserByUUID(uuid);
+    const user = await this.usersService.getUserByUUID(uuid);
+    return this.usersService.formatPublicUser(user);
   }
 
   @Get()
   @HttpCode(HttpStatus.OK)
   async getUsers(@Query() query: GetUsersQueryDto) {
-    return this.usersService.getUsers(query);
+    const result = await this.usersService.getUsers(query);
+
+    return {
+      users: result.users.map((user) =>
+        this.usersService.formatPublicUser(user),
+      ),
+      pagination: result.pagination,
+    };
   }
 }

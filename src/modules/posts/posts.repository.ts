@@ -1,6 +1,6 @@
 import { BaseRepository, FindOptions } from '@drizzle/base.repository';
 import { DrizzleService } from '@drizzle/drizzle.service';
-import { BasePost } from '@nearlyapp/common';
+import { PostEntity } from '@nearlyapp/common';
 import { postsSchema } from '@nearlyapp/common/schemas';
 import { Injectable } from '@nestjs/common';
 import { and, eq, sql } from 'drizzle-orm';
@@ -34,7 +34,7 @@ export class PostsRepository extends BaseRepository<typeof postsSchema> {
   async getRandomPosts(
     userUuid: Nullable<string>,
     limit: number,
-  ): Promise<BasePost[]> {
+  ): Promise<PostEntity[]> {
     const where = userUuid
       ? and(
           eq(postsSchema.status, 'PROCESSED'),
