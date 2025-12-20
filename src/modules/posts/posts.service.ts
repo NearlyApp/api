@@ -135,6 +135,7 @@ export class PostsService {
         body: JSON.stringify({
           callback_url: this.configService.get<string>('CALLBACK_API_URL')!,
           data: {
+            author_id: author.uuid,
             post_id: post.uuid,
             metadata: {
               location: {
