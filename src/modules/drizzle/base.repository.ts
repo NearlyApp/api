@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { DrizzleService } from '@drizzle/drizzle.service';
 import {
   and,
@@ -9,11 +7,12 @@ import {
   isNull,
   SQL,
   SQLWrapper,
+  Table,
 } from 'drizzle-orm';
 import { PgSelect, PgTable, TableConfig } from 'drizzle-orm/pg-core';
 
-type WhereValue<T> = T | SQL | SQLWrapper;
-type WhereClause<TEntity> = Partial<{
+export type WhereValue<T> = T | SQL | SQLWrapper;
+export type WhereClause<TEntity> = Partial<{
   [K in keyof TEntity]: WhereValue<TEntity[K]>;
 }>;
 
@@ -50,36 +49,8 @@ export abstract class BaseRepository<
 
     const query = this.db
       .select()
-      .from(this.schema)
+      .from(this.schema as Table)
       .where(and(...conditions))
-      .limit(1);
-
-    const result = await query;
-
-    return (result[0] as TEntity) ?? null;
-  }
-
-  /**
-   * @deprecated
-   */
-  async findBy<K extends keyof TEntity>(
-    field: K,
-    value: TEntity[K],
-    options: FindOptions = {},
-  ): Promise<Nullable<TEntity>> {
-    const { includeDeleted = false } = options;
-
-    const query = this.db
-      .select()
-      .from(this.schema)
-      .where(
-        includeDeleted && this.schema['deletedAt']
-          ? eq(this.schema[field], value)
-          : and(
-              eq(this.schema[field], value),
-              isNull(this.schema['deletedAt'] as SQL),
-            ),
-      )
       .limit(1);
 
     const result = await query;
@@ -93,7 +64,10 @@ export abstract class BaseRepository<
   ): Promise<TEntity[]> {
     const { offset, limit, includeDeleted = false } = options;
 
-    let query = this.db.select().from(this.schema).$dynamic();
+    let query = this.db
+      .select()
+      .from(this.schema as Table)
+      .$dynamic();
 
     const conditions = this.buildConditions(where);
     if (!includeDeleted && this.schema['deletedAt'])
@@ -111,7 +85,10 @@ export abstract class BaseRepository<
   async create(
     data: Omit<Partial<TEntity>, DataExcludedKeys>,
   ): Promise<TEntity> {
-    const result = await this.db.insert(this.schema).values(data).returning();
+    const result = await this.db
+      .insert(this.schema as Table)
+      .values(data)
+      .returning();
 
     return result[0] as TEntity;
   }
@@ -145,7 +122,7 @@ export abstract class BaseRepository<
       await this.db.delete(this.schema).where(and(...conditions));
     else {
       await this.db
-        .update(this.schema)
+        .update(this.schema as Table)
         .set({ deletedAt: new Date() })
         .where(and(...conditions));
     }
@@ -158,7 +135,7 @@ export abstract class BaseRepository<
     const { includeDeleted = false } = options;
     const query = this.db
       .select({ count: count() })
-      .from(this.schema)
+      .from(this.schema as Table)
       .$dynamic();
 
     const conditions = this.buildConditions(where);
