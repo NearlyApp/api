@@ -2,7 +2,7 @@ import { RecommendationStatus } from '@/types/Recommendation';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  IsBoolean,
+  IsBooleanString,
   IsInt,
   IsLatitude,
   IsLongitude,
@@ -81,11 +81,11 @@ export class GetRecommendPostsQueryDto {
   })
   lng: number;
 
-  @IsBoolean()
+  @IsBooleanString()
   @IsOptional()
   @ApiPropertyOptional({
     description: 'Whether to include author in the response',
-    example: true,
+    example: 'true',
   })
   withAuthor: boolean = true;
 }
@@ -111,11 +111,11 @@ export class GetPostsQueryDto {
   })
   limit?: number;
 
-  @IsBoolean()
+  @IsBooleanString()
   @IsOptional()
   @ApiPropertyOptional({
     description: 'Whether to include author in the response',
-    example: true,
+    example: 'true',
   })
   withAuthor: boolean = true;
 }
