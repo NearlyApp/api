@@ -234,7 +234,7 @@ export class PostsService {
     userUuid: Nullable<string> = null,
     searchRadiusMeters: number = SEARCH_RADIUS_METERS_DEFAULT,
   ): Promise<PostEntity[]> {
-    const functionName = arguments.callee.name;
+    const functionName = 'getRecommendedPosts';
     const startTotal = Date.now();
 
     const startCandidates = Date.now();
@@ -248,7 +248,7 @@ export class PostsService {
       RECOMMENDATION_RANDOM_POSTS_COUNT,
     );
     this.logger.debug(
-      `${functionName ? `[${functionName}]` : ''} getRandomPosts: ${Date.now() - startCandidates}ms (${candidatePosts.length} candidates)`,
+      `[${functionName}] getRandomPosts: ${Date.now() - startCandidates}ms (${candidatePosts.length} candidates)`,
     );
 
     const startRecommendationFetch = Date.now();
@@ -281,7 +281,7 @@ export class PostsService {
       },
     );
     this.logger.debug(
-      `${functionName ? `[${functionName}]` : ''} recommendation API fetch: ${Date.now() - startRecommendationFetch}ms`,
+      `[${functionName}] recommendation API fetch: ${Date.now() - startRecommendationFetch}ms`,
     );
 
     if (!recommendedPostsResult.ok) {
@@ -307,12 +307,10 @@ export class PostsService {
       status: 'PROCESSED',
     });
     this.logger.debug(
-      `${functionName ? `[${functionName}]` : ''} findMany final posts: ${Date.now() - startFinalFetch}ms (${posts.length} posts)`,
+      `[${functionName}] findMany final posts: ${Date.now() - startFinalFetch}ms (${posts.length} posts)`,
     );
 
-    this.logger.debug(
-      `${functionName ? `[${functionName}]` : ''} TOTAL: ${Date.now() - startTotal}ms`,
-    );
+    this.logger.debug(`[${functionName}] TOTAL: ${Date.now() - startTotal}ms`);
 
     return posts;
   }
