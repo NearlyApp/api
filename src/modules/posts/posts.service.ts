@@ -138,6 +138,7 @@ export class PostsService {
           callback_url: this.configService.get<string>('CALLBACK_API_URL')!,
           data: {
             post_id: post.uuid,
+            author_id: userUuid,
             metadata: {
               location: {
                 lat: post.lat,
@@ -253,14 +254,17 @@ export class PostsService {
           'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
         },
         body: JSON.stringify({
-          // user_uuid: userUuid,
           distance: this.convertSearchRadiusToDistance(searchRadiusMeters),
           location: {
             lat: query.lat,
             lon: query.lng,
           },
+          filters: {
+            author_ids: [userUuid],
+          },
           candidates: candidatePosts.map((post) => ({
             post_id: post.uuid,
+            author_id: post.authorUuid,
             metadata: {
               location: {
                 lat: post.lat,
