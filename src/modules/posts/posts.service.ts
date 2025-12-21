@@ -8,6 +8,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { RECOMMENDATION_RANDOM_POSTS_COUNT } from '@posts/posts.constants';
@@ -24,6 +25,8 @@ import { PostsRepository } from './posts.repository';
 export const MAX_POSTS_PER_PAGE = 1000;
 @Injectable()
 export class PostsService {
+  private readonly logger = new Logger(PostsService.name);
+
   constructor(
     private readonly postsRepository: PostsRepository,
     private readonly usersService: UsersService,
@@ -153,7 +156,7 @@ export class PostsService {
 
     if (!ingestResult.ok) {
       const errorBody: string = await ingestResult.text();
-      console.error(
+      this.logger.error(
         `Failed to ingest post ${post.uuid} to recommendation API: ${ingestResult.status}\n${errorBody}`,
       );
 
@@ -201,7 +204,7 @@ export class PostsService {
         },
       );
       if (!deleteResult.ok) {
-        console.error(
+        this.logger.error(
           `Failed to delete post ${uuid} from recommendation API: ${deleteResult.status}\n${await deleteResult.json()}`,
         );
       }
@@ -231,6 +234,10 @@ export class PostsService {
     userUuid: Nullable<string> = null,
     searchRadiusMeters: number = SEARCH_RADIUS_METERS_DEFAULT,
   ): Promise<PostEntity[]> {
+    const functionName = arguments.callee.name;
+    const startTotal = Date.now();
+
+    const startCandidates = Date.now();
     const candidatePosts = await this.postsRepository.getRandomPosts(
       userUuid
         ? {
@@ -240,7 +247,11 @@ export class PostsService {
         : { status: 'PROCESSED' },
       RECOMMENDATION_RANDOM_POSTS_COUNT,
     );
+    this.logger.debug(
+      `${functionName ? `[${functionName}]` : ''} getRandomPosts: ${Date.now() - startCandidates}ms (${candidatePosts.length} candidates)`,
+    );
 
+    const startRecommendationFetch = Date.now();
     const recommendedPostsResult = await fetch(
       this.configService.get('RECOMMENDATION_API_URL')! + '/recommend',
       {
@@ -269,10 +280,13 @@ export class PostsService {
         }),
       },
     );
+    this.logger.debug(
+      `${functionName ? `[${functionName}]` : ''} recommendation API fetch: ${Date.now() - startRecommendationFetch}ms`,
+    );
 
     if (!recommendedPostsResult.ok) {
       const errorBody: string = await recommendedPostsResult.text();
-      console.error(
+      this.logger.error(
         `Failed to get recommendations: ${recommendedPostsResult.status}\n${errorBody}`,
       );
       throw new InternalServerErrorException('Failed to get recommendations');
@@ -284,6 +298,7 @@ export class PostsService {
         data.recommendations.map((rec) => rec.post_id),
       );
 
+    const startFinalFetch = Date.now();
     const posts = await this.postsRepository.findMany({
       uuid: inArray(postsSchema.uuid, recommendedPostsIds),
       authorUuid: userUuid
@@ -291,6 +306,13 @@ export class PostsService {
         : undefined,
       status: 'PROCESSED',
     });
+    this.logger.debug(
+      `${functionName ? `[${functionName}]` : ''} findMany final posts: ${Date.now() - startFinalFetch}ms (${posts.length} posts)`,
+    );
+
+    this.logger.debug(
+      `${functionName ? `[${functionName}]` : ''} TOTAL: ${Date.now() - startTotal}ms`,
+    );
 
     return posts;
   }
