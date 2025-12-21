@@ -141,45 +141,11 @@ export class PostsService {
 
     const startIngest = Date.now();
 
-    const ingestResult = await fetch(
-      this.configService.get('RECOMMENDATION_API_URL')! + '/ingest',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
-        },
-        body: JSON.stringify({
-          callback_url: this.configService.get<string>('CALLBACK_API_URL')!,
-          data: {
-            author_id: author.uuid,
-            post_id: post.uuid,
-            metadata: {
-              location: {
-                lat: post.lat,
-                lon: post.lng,
-              },
-            },
-            text: post.content,
-          },
-        }),
-      },
-    );
+    await this.ingestPost(post);
 
     this.logger.debug(
       `[${functionName}] ingest post: ${Date.now() - startIngest}ms`,
     );
-
-    if (!ingestResult.ok) {
-      const errorBody: string = await ingestResult.text();
-      this.logger.error(
-        `Failed to ingest post ${post.uuid} to recommendation API: ${ingestResult.status}\n${errorBody}`,
-      );
-
-      // Rollback post creation
-      await this.postsRepository.delete({ uuid: post.uuid });
-      throw new InternalServerErrorException('Failed to process post');
-    }
 
     this.logger.debug(`[${functionName}] TOTAL: ${Date.now() - startTotal}ms`);
 
@@ -294,7 +260,9 @@ export class PostsService {
               },
             },
             text: post.content,
+            created_at: new Date(post.createdAt).toISOString(),
           })),
+          filters: { author_ids: [userUuid].filter(Boolean) },
         }),
       },
     );
@@ -342,6 +310,46 @@ export class PostsService {
   ): `${number}km` {
     const km = Math.round(searchRadiusMeters / 1000);
     return `${km}km`;
+  }
+
+  private async ingestPost(post: PostEntity) {
+    const response = await fetch(
+      this.configService.get('RECOMMENDATION_API_URL')! + '/ingest',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
+        },
+        body: JSON.stringify({
+          callback_url: this.configService.get<string>('CALLBACK_API_URL')!,
+          data: {
+            author_id: post.authorUuid,
+            post_id: post.uuid,
+            metadata: {
+              location: {
+                lat: post.lat,
+                lon: post.lng,
+              },
+            },
+            text: post.content,
+            created_at: new Date(post.createdAt).toISOString(),
+          },
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const errorBody: string = await response.text();
+      this.logger.error(
+        `Failed to ingest post ${post.uuid} to recommendation API: ${response.status}`,
+        errorBody,
+      );
+
+      // Rollback post creation
+      await this.postsRepository.delete({ uuid: post.uuid });
+      throw new InternalServerErrorException('Failed to ingest post');
+    }
   }
 
   formatPost(post: PostEntity): Post {
