@@ -1,7 +1,6 @@
 import { PaginatedResult } from '@/types/pagination';
 import { Recommendation, RecommendationStatus } from '@/types/Recommendation';
 import { ConfigService } from '@config/config.service';
-import { WhereClause } from '@drizzle/base.repository';
 import { Post, PostEntity } from '@nearlyapp/common';
 import { postsSchema } from '@nearlyapp/common/schemas';
 import { SEARCH_RADIUS_METERS_DEFAULT } from '@nearlyapp/common/schemas/users';
@@ -13,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { RECOMMENDATION_RANDOM_POSTS_COUNT } from '@posts/posts.constants';
 import { UsersService } from '@users/users.service';
-import { and, eq, inArray, not } from 'drizzle-orm';
+import { eq, inArray, not } from 'drizzle-orm';
 import {
   CreatePostDto,
   GetPostsQueryDto,
@@ -234,11 +233,11 @@ export class PostsService {
   ): Promise<PostEntity[]> {
     const candidatePosts = await this.postsRepository.getRandomPosts(
       userUuid
-        ? (and(
-            eq(postsSchema.status, 'PROCESSED'),
-            eq(postsSchema.authorUuid, userUuid),
-          ) as WhereClause<PostEntity>)
-        : (eq(postsSchema.status, 'PROCESSED') as WhereClause<PostEntity>),
+        ? {
+            status: 'PROCESSED',
+            authorUuid: not(eq(postsSchema.authorUuid, userUuid)),
+          }
+        : { status: 'PROCESSED' },
       RECOMMENDATION_RANDOM_POSTS_COUNT,
     );
 
