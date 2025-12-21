@@ -116,32 +116,29 @@ export class PostsRepository extends BaseRepository<typeof postsSchema> {
       conditions.push(isNull(this.schema['deletedAt'] as SQLWrapper));
     }
 
-    const whereClause =
-      conditions.length > 0 ? sql`WHERE ${and(...conditions)}` : sql``;
+    const whereCondition =
+      conditions.length > 0 ? and(...conditions) : undefined;
 
     // Use TABLESAMPLE for efficient random sampling
     // Sample ~10% of pages, then filter and limit
     // This is much faster than ORDER BY RANDOM() on large tables
-    const result = await this.db.execute<PostEntity>(sql`
-      WITH sampled AS (
-        SELECT * FROM ${postsSchema} TABLESAMPLE BERNOULLI(10)
-      )
-      SELECT * FROM sampled
-      ${whereClause}
-      ORDER BY RANDOM()
-      LIMIT ${limit}
-    `);
+    const result = await this.db
+      .select()
+      .from(sql`${postsSchema} TABLESAMPLE BERNOULLI(10)`)
+      .where(whereCondition)
+      .orderBy(sql`RANDOM()`)
+      .limit(limit);
 
     // Fallback: if TABLESAMPLE didn't return enough rows, use standard query
-    if (result.rows.length < limit) {
+    if (result.length < limit) {
       return this.db
         .select()
         .from(postsSchema)
-        .where(and(...conditions))
+        .where(whereCondition)
         .orderBy(sql`RANDOM()`)
         .limit(limit);
     }
 
-    return result.rows;
+    return result as PostEntity[];
   }
 }
