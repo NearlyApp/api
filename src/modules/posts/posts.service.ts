@@ -1,17 +1,21 @@
 import { PaginatedResult } from '@/types/pagination';
 import { Recommendation, RecommendationStatus } from '@/types/Recommendation';
 import { ConfigService } from '@config/config.service';
+import { WhereClause } from '@drizzle/base.repository';
 import { Post, PostEntity } from '@nearlyapp/common';
+import { postsSchema } from '@nearlyapp/common/schemas';
 import { SEARCH_RADIUS_METERS_DEFAULT } from '@nearlyapp/common/schemas/users';
 import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { LikesService } from '@posts/likes/likes.service';
 import { RECOMMENDATION_RANDOM_POSTS_COUNT } from '@posts/posts.constants';
 import { UsersService } from '@users/users.service';
+import { eq, inArray, not } from 'drizzle-orm';
 import {
   CreatePostDto,
   GetPostsQueryDto,
@@ -23,6 +27,8 @@ import { PostsRepository } from './posts.repository';
 export const MAX_POSTS_PER_PAGE = 1000;
 @Injectable()
 export class PostsService {
+  private readonly logger = new Logger(PostsService.name);
+
   constructor(
     private readonly postsRepository: PostsRepository,
     private readonly likesService: LikesService,
@@ -95,6 +101,9 @@ export class PostsService {
   }
 
   async createPost(userUuid: string, data: CreatePostDto): Promise<PostEntity> {
+    const functionName = 'createPost';
+    const startTotal = Date.now();
+
     const author = await this.usersService.getUserByUUID(userUuid);
     if (!author) {
       throw new NotFoundException(`Author with UUID ${userUuid} not found`);
@@ -118,6 +127,8 @@ export class PostsService {
       throw new BadRequestException('Invalid coordinates provided');
     }
 
+    const startCreatePost = Date.now();
+
     const sanitizedContent = data.content.trim();
 
     const post = await this.postsRepository.create({
@@ -126,41 +137,19 @@ export class PostsService {
       authorUuid: author.uuid,
     });
 
-    const ingestResult = await fetch(
-      this.configService.get('RECOMMENDATION_API_URL')! + '/ingest',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
-        },
-        body: JSON.stringify({
-          callback_url: this.configService.get<string>('CALLBACK_API_URL')!,
-          data: {
-            post_id: post.uuid,
-            author_id: userUuid,
-            metadata: {
-              location: {
-                lat: post.lat,
-                lon: post.lng,
-              },
-            },
-            text: post.content,
-          },
-        }),
-      },
+    this.logger.debug(
+      `[${functionName}] create post: ${Date.now() - startCreatePost}ms`,
     );
 
-    if (!ingestResult.ok) {
-      const errorBody: string = await ingestResult.text();
-      console.error(
-        `Failed to ingest post ${post.uuid} to recommendation API: ${ingestResult.status}\n${errorBody}`,
-      );
+    const startIngest = Date.now();
 
-      // Rollback post creation
-      await this.postsRepository.delete({ uuid: post.uuid });
-      throw new InternalServerErrorException('Failed to process post');
-    }
+    await this.ingestPost(post);
+
+    this.logger.debug(
+      `[${functionName}] ingest post: ${Date.now() - startIngest}ms`,
+    );
+
+    this.logger.debug(`[${functionName}] TOTAL: ${Date.now() - startTotal}ms`);
 
     return post;
   }
@@ -201,7 +190,7 @@ export class PostsService {
         },
       );
       if (!deleteResult.ok) {
-        console.error(
+        this.logger.error(
           `Failed to delete post ${uuid} from recommendation API: ${deleteResult.status}\n${await deleteResult.json()}`,
         );
       }
@@ -226,25 +215,29 @@ export class PostsService {
     return post.authorUuid === userUuid;
   }
 
-  // Seed for random posts
-  async getRandomPosts(
-    userUuid: Nullable<string>,
-    count: number,
-  ): Promise<PostEntity[]> {
-    const posts = await this.postsRepository.getRandomPosts(userUuid, count);
-    return posts;
-  }
-
   async getRecommendedPosts(
     query: GetRecommendPostsQueryDto,
     userUuid: Nullable<string> = null,
     searchRadiusMeters: number = SEARCH_RADIUS_METERS_DEFAULT,
   ): Promise<PostEntity[]> {
-    const candidatePosts = await this.getRandomPosts(
-      userUuid,
+    const functionName = 'getRecommendedPosts';
+    const startTotal = Date.now();
+
+    const startCandidates = Date.now();
+    const candidatePosts = await this.postsRepository.getRandomPosts(
+      userUuid
+        ? {
+            status: 'PROCESSED',
+            authorUuid: not(eq(postsSchema.authorUuid, userUuid)),
+          }
+        : { status: 'PROCESSED' },
       RECOMMENDATION_RANDOM_POSTS_COUNT,
     );
+    this.logger.debug(
+      `[${functionName}] getRandomPosts: ${Date.now() - startCandidates}ms (${candidatePosts.length} candidates)`,
+    );
 
+    const startRecommendationFetch = Date.now();
     const recommendedPostsResult = await fetch(
       this.configService.get('RECOMMENDATION_API_URL')! + '/recommend',
       {
@@ -259,9 +252,6 @@ export class PostsService {
             lat: query.lat,
             lon: query.lng,
           },
-          filters: {
-            author_ids: [userUuid],
-          },
           candidates: candidatePosts.map((post) => ({
             post_id: post.uuid,
             author_id: post.authorUuid,
@@ -272,14 +262,19 @@ export class PostsService {
               },
             },
             text: post.content,
+            created_at: new Date(post.createdAt).toISOString(),
           })),
+          filters: { author_ids: [userUuid].filter(Boolean) },
         }),
       },
+    );
+    this.logger.debug(
+      `[${functionName}] recommendation API fetch: ${Date.now() - startRecommendationFetch}ms`,
     );
 
     if (!recommendedPostsResult.ok) {
       const errorBody: string = await recommendedPostsResult.text();
-      console.error(
+      this.logger.error(
         `Failed to get recommendations: ${recommendedPostsResult.status}\n${errorBody}`,
       );
       throw new InternalServerErrorException('Failed to get recommendations');
@@ -291,23 +286,25 @@ export class PostsService {
         data.recommendations.map((rec) => rec.post_id),
       );
 
-    const posts = await Promise.all(
-      recommendedPostsIds.map(async (postId: string) => {
-        try {
-          return await this.getPostByUUID(postId);
-        } catch (err) {
-          if (err instanceof NotFoundException) {
-            return null;
-          }
-          throw err;
-        }
-      }),
+    const startFinalFetch = Date.now();
+
+    const where: WhereClause<PostEntity> = {
+      uuid: inArray(postsSchema.uuid, recommendedPostsIds),
+      status: 'PROCESSED',
+    };
+
+    if (userUuid) {
+      where.authorUuid = not(eq(postsSchema.authorUuid, userUuid));
+    }
+
+    const posts = await this.postsRepository.findMany(where);
+    this.logger.debug(
+      `[${functionName}] findMany final posts: ${Date.now() - startFinalFetch}ms (${posts.length} posts)`,
     );
 
-    return posts.filter(
-      (post): post is PostEntity =>
-        post !== null && post.authorUuid !== userUuid,
-    );
+    this.logger.debug(`[${functionName}] TOTAL: ${Date.now() - startTotal}ms`);
+
+    return posts;
   }
 
   private convertSearchRadiusToDistance(
@@ -315,6 +312,46 @@ export class PostsService {
   ): `${number}km` {
     const km = Math.round(searchRadiusMeters / 1000);
     return `${km}km`;
+  }
+
+  private async ingestPost(post: PostEntity) {
+    const response = await fetch(
+      this.configService.get('RECOMMENDATION_API_URL')! + '/ingest',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
+        },
+        body: JSON.stringify({
+          callback_url: this.configService.get<string>('CALLBACK_API_URL')!,
+          data: {
+            author_id: post.authorUuid,
+            post_id: post.uuid,
+            metadata: {
+              location: {
+                lat: post.lat,
+                lon: post.lng,
+              },
+            },
+            text: post.content,
+            created_at: new Date(post.createdAt).toISOString(),
+          },
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const errorBody: string = await response.text();
+      this.logger.error(
+        `Failed to ingest post ${post.uuid} to recommendation API: ${response.status}`,
+        errorBody,
+      );
+
+      // Rollback post creation
+      await this.postsRepository.delete({ uuid: post.uuid });
+      throw new InternalServerErrorException('Failed to ingest post');
+    }
   }
 
   async formatPost(
