@@ -1,7 +1,9 @@
 import { PaginatedResult } from '@/types/pagination';
 import { Recommendation, RecommendationStatus } from '@/types/Recommendation';
 import { ConfigService } from '@config/config.service';
+import { WhereClause } from '@drizzle/base.repository';
 import { Post, PostEntity } from '@nearlyapp/common';
+import { postsSchema } from '@nearlyapp/common/schemas';
 import { SEARCH_RADIUS_METERS_DEFAULT } from '@nearlyapp/common/schemas/users';
 import {
   BadRequestException,
@@ -11,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { RECOMMENDATION_RANDOM_POSTS_COUNT } from '@posts/posts.constants';
 import { UsersService } from '@users/users.service';
+import { and, eq, inArray, not } from 'drizzle-orm';
 import {
   CreatePostDto,
   GetPostsQueryDto,
@@ -223,22 +226,18 @@ export class PostsService {
     return post.authorUuid === userUuid;
   }
 
-  // Seed for random posts
-  async getRandomPosts(
-    userUuid: Nullable<string>,
-    count: number,
-  ): Promise<PostEntity[]> {
-    const posts = await this.postsRepository.getRandomPosts(userUuid, count);
-    return posts;
-  }
-
   async getRecommendedPosts(
     query: GetRecommendPostsQueryDto,
     userUuid: Nullable<string> = null,
     searchRadiusMeters: number = SEARCH_RADIUS_METERS_DEFAULT,
   ): Promise<PostEntity[]> {
-    const candidatePosts = await this.getRandomPosts(
-      userUuid,
+    const candidatePosts = await this.postsRepository.getRandomPosts(
+      userUuid
+        ? (and(
+            eq(postsSchema.status, 'PROCESSED'),
+            eq(postsSchema.authorUuid, userUuid),
+          ) as WhereClause<PostEntity>)
+        : (eq(postsSchema.status, 'PROCESSED') as WhereClause<PostEntity>),
       RECOMMENDATION_RANDOM_POSTS_COUNT,
     );
 
@@ -285,23 +284,15 @@ export class PostsService {
         data.recommendations.map((rec) => rec.post_id),
       );
 
-    const posts = await Promise.all(
-      recommendedPostsIds.map(async (postId: string) => {
-        try {
-          return await this.getPostByUUID(postId);
-        } catch (err) {
-          if (err instanceof NotFoundException) {
-            return null;
-          }
-          throw err;
-        }
-      }),
-    );
+    const posts = await this.postsRepository.findMany({
+      uuid: inArray(postsSchema.uuid, recommendedPostsIds),
+      authorUuid: userUuid
+        ? not(eq(postsSchema.authorUuid, userUuid))
+        : undefined,
+      status: 'PROCESSED',
+    });
 
-    return posts.filter(
-      (post): post is PostEntity =>
-        post !== null && post.authorUuid !== userUuid,
-    );
+    return posts;
   }
 
   private convertSearchRadiusToDistance(
