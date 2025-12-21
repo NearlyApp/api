@@ -1,6 +1,7 @@
 import { PaginatedResult } from '@/types/pagination';
 import { Recommendation, RecommendationStatus } from '@/types/Recommendation';
 import { ConfigService } from '@config/config.service';
+import { WhereClause } from '@drizzle/base.repository';
 import { Post, PostEntity } from '@nearlyapp/common';
 import { postsSchema } from '@nearlyapp/common/schemas';
 import { SEARCH_RADIUS_METERS_DEFAULT } from '@nearlyapp/common/schemas/users';
@@ -98,6 +99,9 @@ export class PostsService {
   }
 
   async createPost(userUuid: string, data: CreatePostDto): Promise<PostEntity> {
+    const functionName = 'createPost';
+    const startTotal = Date.now();
+
     const author = await this.usersService.getUserByUUID(userUuid);
     if (!author) {
       throw new NotFoundException(`Author with UUID ${userUuid} not found`);
@@ -121,6 +125,8 @@ export class PostsService {
       throw new BadRequestException('Invalid coordinates provided');
     }
 
+    const startCreatePost = Date.now();
+
     const sanitizedContent = data.content.trim();
 
     const post = await this.postsRepository.create({
@@ -128,6 +134,12 @@ export class PostsService {
       content: sanitizedContent,
       authorUuid: author.uuid,
     });
+
+    this.logger.debug(
+      `[${functionName}] create post: ${Date.now() - startCreatePost}ms`,
+    );
+
+    const startIngest = Date.now();
 
     const ingestResult = await fetch(
       this.configService.get('RECOMMENDATION_API_URL')! + '/ingest',
@@ -154,6 +166,10 @@ export class PostsService {
       },
     );
 
+    this.logger.debug(
+      `[${functionName}] ingest post: ${Date.now() - startIngest}ms`,
+    );
+
     if (!ingestResult.ok) {
       const errorBody: string = await ingestResult.text();
       this.logger.error(
@@ -164,6 +180,8 @@ export class PostsService {
       await this.postsRepository.delete({ uuid: post.uuid });
       throw new InternalServerErrorException('Failed to process post');
     }
+
+    this.logger.debug(`[${functionName}] TOTAL: ${Date.now() - startTotal}ms`);
 
     return post;
   }
@@ -299,13 +317,17 @@ export class PostsService {
       );
 
     const startFinalFetch = Date.now();
-    const posts = await this.postsRepository.findMany({
+
+    const where: WhereClause<PostEntity> = {
       uuid: inArray(postsSchema.uuid, recommendedPostsIds),
-      authorUuid: userUuid
-        ? not(eq(postsSchema.authorUuid, userUuid))
-        : undefined,
       status: 'PROCESSED',
-    });
+    };
+
+    if (userUuid) {
+      where.authorUuid = not(eq(postsSchema.authorUuid, userUuid));
+    }
+
+    const posts = await this.postsRepository.findMany(where);
     this.logger.debug(
       `[${functionName}] findMany final posts: ${Date.now() - startFinalFetch}ms (${posts.length} posts)`,
     );
