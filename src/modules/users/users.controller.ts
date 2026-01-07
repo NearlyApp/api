@@ -47,10 +47,12 @@ export class UsersController {
     @Query() query: GetPostsQueryDto,
   ) {
     const result = await this.postsService.getPostsByAuthor(query, uuid);
+    const formattedPosts = await Promise.all(
+      result.posts.map((post) => this.postsService.formatPost(post, uuid)),
+    );
+    console.log('User Posts:', formattedPosts);
     return {
-      posts: result.posts.map((post) =>
-        this.postsService.formatPost(post, uuid),
-      ),
+      posts: formattedPosts,
       pagination: result.pagination,
     };
   }
