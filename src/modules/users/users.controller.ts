@@ -48,7 +48,9 @@ export class UsersController {
   ) {
     const result = await this.postsService.getPostsByAuthor(query, uuid);
     return {
-      posts: result.posts.map((post) => this.postsService.formatPost(post)),
+      posts: result.posts.map((post) =>
+        this.postsService.formatPost(post, uuid),
+      ),
       pagination: result.pagination,
     };
   }
