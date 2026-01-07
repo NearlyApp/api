@@ -67,6 +67,7 @@ export class PostsController {
       posts.map((post) => this.postsService.formatPost(post, req.user?.uuid)),
     );
 
+    console.log('Recommended Posts:', formattedPosts);
     return {
       posts: formattedPosts,
     };

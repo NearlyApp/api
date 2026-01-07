@@ -137,7 +137,7 @@ export class LikesService {
     const isLikedByUser = userUuid
       ? await this.getIfUserLikedPost(postUuid, userUuid)
       : false;
-
+    console.log('Formatted likes: ', { count, isLikedByUser });
     return { count, isLikedByUser };
   }
 }
