@@ -12,6 +12,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { LikesService } from '@posts/likes/likes.service';
 import { RECOMMENDATION_RANDOM_POSTS_COUNT } from '@posts/posts.constants';
 import { UsersService } from '@users/users.service';
 import { eq, inArray, not } from 'drizzle-orm';
@@ -30,6 +31,7 @@ export class PostsService {
 
   constructor(
     private readonly postsRepository: PostsRepository,
+    private readonly likesService: LikesService,
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
   ) {}
@@ -245,7 +247,6 @@ export class PostsService {
           'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
         },
         body: JSON.stringify({
-          // user_uuid: userUuid,
           distance: this.convertSearchRadiusToDistance(searchRadiusMeters),
           location: {
             lat: query.lat,
@@ -253,6 +254,7 @@ export class PostsService {
           },
           candidates: candidatePosts.map((post) => ({
             post_id: post.uuid,
+            author_id: post.authorUuid,
             metadata: {
               location: {
                 lat: post.lat,
@@ -352,7 +354,12 @@ export class PostsService {
     }
   }
 
-  formatPost(post: PostEntity): Post {
+  async formatPost(
+    post: PostEntity,
+    userUuid?: Nullable<string>,
+  ): Promise<Post> {
+    const likes = await this.likesService.populatePostLike(post.uuid, userUuid);
+
     return {
       uuid: post.uuid,
       authorUuid: post.authorUuid,
@@ -363,10 +370,7 @@ export class PostsService {
         lng: post.lng,
         alt: post.alt,
       },
-      likes: {
-        count: 0,
-        isLikedByUser: false,
-      },
+      likes,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
       deletedAt: post.deletedAt,

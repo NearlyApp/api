@@ -28,10 +28,15 @@ export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Get()
-  async getPosts(@Query() query: GetPostsQueryDto) {
+  async getPosts(@Req() req: Request, @Query() query: GetPostsQueryDto) {
     const result = await this.postsService.getPosts(query);
+    const formattedPosts = await Promise.all(
+      result.posts.map((post) =>
+        this.postsService.formatPost(post, req.user?.uuid),
+      ),
+    );
     return {
-      posts: result.posts.map((post) => this.postsService.formatPost(post)),
+      posts: formattedPosts,
       pagination: result.pagination,
     };
   }
@@ -58,15 +63,19 @@ export class PostsController {
       req.user?.searchRadiusMeters,
     );
 
+    const formattedPosts = await Promise.all(
+      posts.map((post) => this.postsService.formatPost(post, req.user?.uuid)),
+    );
+
     return {
-      posts: posts.map((post) => this.postsService.formatPost(post)),
+      posts: formattedPosts,
     };
   }
 
   @Get(':uuid')
-  async getPost(@Param('uuid') uuid: string) {
+  async getPost(@Req() req: Request, @Param('uuid') uuid: string) {
     const post = await this.postsService.getPostByUUID(uuid);
-    return this.postsService.formatPost(post);
+    return this.postsService.formatPost(post, req.user?.uuid);
   }
 
   @Post()
