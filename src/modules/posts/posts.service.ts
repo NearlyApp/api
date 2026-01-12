@@ -1,10 +1,10 @@
 import { PaginatedResult } from '@/types/pagination';
-import { Recommendation, RecommendationStatus } from '@/types/Recommendation';
+import { RecommendationStatus } from '@/types/Recommendation';
 import { ConfigService } from '@config/config.service';
-import { WhereClause } from '@drizzle/base.repository';
+// import { WhereClause } from '@drizzle/base.repository';
 import { Post, PostEntity } from '@nearlyapp/common';
 import { postsSchema } from '@nearlyapp/common/schemas';
-import { SEARCH_RADIUS_METERS_DEFAULT } from '@nearlyapp/common/schemas/users';
+// import { SEARCH_RADIUS_METERS_DEFAULT } from '@nearlyapp/common/schemas/users';
 import {
   BadRequestException,
   Injectable,
@@ -15,7 +15,7 @@ import {
 import { LikesService } from '@posts/likes/likes.service';
 import { RECOMMENDATION_RANDOM_POSTS_COUNT } from '@posts/posts.constants';
 import { UsersService } from '@users/users.service';
-import { eq, inArray, not } from 'drizzle-orm';
+import { eq, not } from 'drizzle-orm';
 import {
   CreatePostDto,
   GetPostsQueryDto,
@@ -218,10 +218,10 @@ export class PostsService {
   async getRecommendedPosts(
     query: GetRecommendPostsQueryDto,
     userUuid: Nullable<string> = null,
-    searchRadiusMeters: number = SEARCH_RADIUS_METERS_DEFAULT,
+    // searchRadiusMeters: number = SEARCH_RADIUS_METERS_DEFAULT,
   ): Promise<PostEntity[]> {
     const functionName = 'getRecommendedPosts';
-    const startTotal = Date.now();
+    // const startTotal = Date.now();
 
     const startCandidates = Date.now();
     const candidatePosts = await this.postsRepository.getRandomPosts(
@@ -244,82 +244,82 @@ export class PostsService {
     this.logger.debug('Mock recommended posts: ', mockPosts);
     return mockPosts;
 
-    const startRecommendationFetch = Date.now();
-    const recommendedPostsResult = await fetch(
-      this.configService.get('RECOMMENDATION_API_URL')! + '/recommend',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
-        },
-        body: JSON.stringify({
-          distance: this.convertSearchRadiusToDistance(searchRadiusMeters),
-          location: {
-            lat: query.lat,
-            lon: query.lng,
-          },
-          candidates: candidatePosts.map((post) => ({
-            post_id: post.uuid,
-            author_id: post.authorUuid,
-            metadata: {
-              location: {
-                lat: post.lat,
-                lon: post.lng,
-              },
-            },
-            text: post.content,
-            created_at: new Date(post.createdAt).toISOString(),
-          })),
-          filters: { author_ids: [userUuid].filter(Boolean) },
-        }),
-      },
-    );
-    this.logger.debug(
-      `[${functionName}] recommendation API fetch: ${Date.now() - startRecommendationFetch}ms`,
-    );
+    // const startRecommendationFetch = Date.now();
+    // const recommendedPostsResult = await fetch(
+    //   this.configService.get('RECOMMENDATION_API_URL')! + '/recommend',
+    //   {
+    //     method: 'POST',
+    //     headers: {
+    //       'Content-Type': 'application/json',
+    //       'x-api-key': this.configService.get('RECOMMENDATION_API_KEY')!,
+    //     },
+    //     body: JSON.stringify({
+    //       distance: this.convertSearchRadiusToDistance(searchRadiusMeters),
+    //       location: {
+    //         lat: query.lat,
+    //         lon: query.lng,
+    //       },
+    //       candidates: candidatePosts.map((post) => ({
+    //         post_id: post.uuid,
+    //         author_id: post.authorUuid,
+    //         metadata: {
+    //           location: {
+    //             lat: post.lat,
+    //             lon: post.lng,
+    //           },
+    //         },
+    //         text: post.content,
+    //         created_at: new Date(post.createdAt).toISOString(),
+    //       })),
+    //       filters: { author_ids: [userUuid].filter(Boolean) },
+    //     }),
+    //   },
+    // );
+    // this.logger.debug(
+    //   `[${functionName}] recommendation API fetch: ${Date.now() - startRecommendationFetch}ms`,
+    // );
 
-    if (!recommendedPostsResult.ok) {
-      const errorBody: string = await recommendedPostsResult.text();
-      this.logger.error(
-        `Failed to get recommendations: ${recommendedPostsResult.status}\n${errorBody}`,
-      );
-      throw new InternalServerErrorException('Failed to get recommendations');
-    }
+    // if (!recommendedPostsResult.ok) {
+    //   const errorBody: string = await recommendedPostsResult.text();
+    //   this.logger.error(
+    //     `Failed to get recommendations: ${recommendedPostsResult.status}\n${errorBody}`,
+    //   );
+    //   throw new InternalServerErrorException('Failed to get recommendations');
+    // }
 
-    const recommendedPostsIds: string[] = await recommendedPostsResult
-      .json()
-      .then((data: { recommendations: Recommendation[] }) =>
-        data.recommendations.map((rec) => rec.post_id),
-      );
+    // const recommendedPostsIds: string[] = await recommendedPostsResult
+    //   .json()
+    //   .then((data: { recommendations: Recommendation[] }) =>
+    //     data.recommendations.map((rec) => rec.post_id),
+    //   );
 
-    const startFinalFetch = Date.now();
+    // const startFinalFetch = Date.now();
 
-    const where: WhereClause<PostEntity> = {
-      uuid: inArray(postsSchema.uuid, recommendedPostsIds),
-      status: 'PROCESSED',
-    };
+    // const where: WhereClause<PostEntity> = {
+    //   uuid: inArray(postsSchema.uuid, recommendedPostsIds),
+    //   status: 'PROCESSED',
+    // };
 
-    if (userUuid) {
-      where.authorUuid = not(eq(postsSchema.authorUuid, userUuid));
-    }
+    // if (userUuid) {
+    //   where.authorUuid = not(eq(postsSchema.authorUuid, userUuid));
+    // }
 
-    const posts = await this.postsRepository.findMany(where);
-    this.logger.debug(
-      `[${functionName}] findMany final posts: ${Date.now() - startFinalFetch}ms (${posts.length} posts)`,
-    );
+    // const posts = await this.postsRepository.findMany(where);
+    // this.logger.debug(
+    //   `[${functionName}] findMany final posts: ${Date.now() - startFinalFetch}ms (${posts.length} posts)`,
+    // );
 
-    this.logger.debug(`[${functionName}] TOTAL: ${Date.now() - startTotal}ms`);
+    // this.logger.debug(`[${functionName}] TOTAL: ${Date.now() - startTotal}ms`);
 
-    return posts;
+    // return posts;
   }
 
-  private convertSearchRadiusToDistance(
-    searchRadiusMeters: number,
-  ): `${number}km` {
-    const km = Math.round(searchRadiusMeters / 1000);
-    return `${km}km`;
-  }
+  // private convertSearchRadiusToDistance(
+  //   searchRadiusMeters: number,
+  // ): `${number}km` {
+  //   const km = Math.round(searchRadiusMeters / 1000);
+  //   return `${km}km`;
+  // }
 
   private async ingestPost(post: PostEntity) {
     const response = await fetch(
