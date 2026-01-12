@@ -237,6 +237,12 @@ export class PostsService {
       `[${functionName}] getRandomPosts: ${Date.now() - startCandidates}ms (${candidatePosts.length} candidates)`,
     );
 
+    // TODO: Remove mock below
+    const mockPosts = await this.postsRepository.findMany({
+      status: 'PROCESSED',
+    });
+    return mockPosts;
+
     const startRecommendationFetch = Date.now();
     const recommendedPostsResult = await fetch(
       this.configService.get('RECOMMENDATION_API_URL')! + '/recommend',
@@ -359,7 +365,7 @@ export class PostsService {
     userUuid?: Nullable<string>,
   ): Promise<Post> {
     const likes = await this.likesService.populatePostLike(post.uuid, userUuid);
-
+    console.debug('Formatted post: ', { post, likes });
     return {
       uuid: post.uuid,
       authorUuid: post.authorUuid,
