@@ -241,7 +241,7 @@ export class PostsService {
     const mockPosts = await this.postsRepository.findMany({
       status: 'PROCESSED',
     });
-    console.debug('Mock recommended posts: ', mockPosts);
+    this.logger.debug('Mock recommended posts: ', mockPosts);
     return mockPosts;
 
     const startRecommendationFetch = Date.now();
