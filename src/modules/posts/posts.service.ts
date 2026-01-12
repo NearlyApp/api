@@ -1,10 +1,9 @@
 import { PaginatedResult } from '@/types/pagination';
 import { RecommendationStatus } from '@/types/Recommendation';
 import { ConfigService } from '@config/config.service';
-// import { WhereClause } from '@drizzle/base.repository';
 import { Post, PostEntity } from '@nearlyapp/common';
 import { postsSchema } from '@nearlyapp/common/schemas';
-// import { SEARCH_RADIUS_METERS_DEFAULT } from '@nearlyapp/common/schemas/users';
+import { SEARCH_RADIUS_METERS_DEFAULT } from '@nearlyapp/common/schemas/users';
 import {
   BadRequestException,
   Injectable,
@@ -218,10 +217,10 @@ export class PostsService {
   async getRecommendedPosts(
     query: GetRecommendPostsQueryDto,
     userUuid: Nullable<string> = null,
-    // searchRadiusMeters: number = SEARCH_RADIUS_METERS_DEFAULT,
+    searchRadiusMeters: number = SEARCH_RADIUS_METERS_DEFAULT,
   ): Promise<PostEntity[]> {
     const functionName = 'getRecommendedPosts';
-    // const startTotal = Date.now();
+    const startTotal = Date.now();
 
     const startCandidates = Date.now();
     const candidatePosts = await this.postsRepository.getRandomPosts(
@@ -237,11 +236,15 @@ export class PostsService {
       `[${functionName}] getRandomPosts: ${Date.now() - startCandidates}ms (${candidatePosts.length} candidates)`,
     );
 
-    // TODO: Remove mock below
+    // TODO: Remove mock
     const mockPosts = await this.postsRepository.findMany({
       status: 'PROCESSED',
     });
-    this.logger.debug('Mock recommended posts: ', mockPosts);
+    this.logger.debug(`[${functionName}] TOTAL: ${Date.now() - startTotal}ms`);
+    this.logger.debug(
+      `[${functionName}] Returning mock posts (${mockPosts.length} posts)`,
+    );
+    this.logger.debug(`[${functionName}] Radius: ${searchRadiusMeters} meters`);
     return mockPosts;
 
     // const startRecommendationFetch = Date.now();
@@ -314,12 +317,12 @@ export class PostsService {
     // return posts;
   }
 
-  // private convertSearchRadiusToDistance(
-  //   searchRadiusMeters: number,
-  // ): `${number}km` {
-  //   const km = Math.round(searchRadiusMeters / 1000);
-  //   return `${km}km`;
-  // }
+  private convertSearchRadiusToDistance(
+    searchRadiusMeters: number,
+  ): `${number}km` {
+    const km = Math.round(searchRadiusMeters / 1000);
+    return `${km}km`;
+  }
 
   private async ingestPost(post: PostEntity) {
     const response = await fetch(
