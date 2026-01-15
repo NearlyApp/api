@@ -358,8 +358,6 @@ export class PostsService {
     post: PostEntity,
     userUuid?: Nullable<string>,
   ): Promise<Post> {
-    console.log('Formatting post:', post);
-
     const likes = await this.likesService.populatePostLike(post.uuid, userUuid);
 
     return {

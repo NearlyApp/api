@@ -48,10 +48,12 @@ export class UsersController {
   ) {
     const result = await this.postsService.getPostsByAuthor(query, uuid);
 
-    console.log(result);
+    const formattedPosts = await Promise.all(
+      result.posts.map(async (post) => this.postsService.formatPost(post)),
+    );
 
     return {
-      posts: result.posts.map((post) => this.postsService.formatPost(post)),
+      posts: formattedPosts,
       pagination: result.pagination,
     };
   }
