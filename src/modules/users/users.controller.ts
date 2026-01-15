@@ -44,16 +44,16 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   async getUserPosts(
     @Param('uuid') uuid: string,
+    @Req() req: Request,
     @Query() query: GetPostsQueryDto,
   ) {
     const result = await this.postsService.getPostsByAuthor(query, uuid);
 
-    const formattedPosts = await Promise.all(
-      result.posts.map(async (post) => this.postsService.formatPost(post)),
-    );
-
     return {
-      posts: formattedPosts,
+      posts: await this.postsService.populatePosts(
+        result.posts,
+        req.user?.uuid,
+      ),
       pagination: result.pagination,
     };
   }

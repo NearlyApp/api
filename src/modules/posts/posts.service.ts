@@ -354,7 +354,7 @@ export class PostsService {
     }
   }
 
-  async formatPost(
+  async populatePost(
     post: PostEntity,
     userUuid?: Nullable<string>,
   ): Promise<Post> {
@@ -375,5 +375,12 @@ export class PostsService {
       updatedAt: post.updatedAt,
       deletedAt: post.deletedAt,
     };
+  }
+
+  async populatePosts(
+    posts: PostEntity[],
+    userUuid?: Nullable<string>,
+  ): Promise<Post[]> {
+    return Promise.all(posts.map((post) => this.populatePost(post, userUuid)));
   }
 }

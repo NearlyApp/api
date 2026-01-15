@@ -30,13 +30,12 @@ export class PostsController {
   @Get()
   async getPosts(@Req() req: Request, @Query() query: GetPostsQueryDto) {
     const result = await this.postsService.getPosts(query);
-    const formattedPosts = await Promise.all(
-      result.posts.map((post) =>
-        this.postsService.formatPost(post, req.user?.uuid),
-      ),
-    );
+
     return {
-      posts: formattedPosts,
+      posts: await this.postsService.populatePosts(
+        result.posts,
+        req.user?.uuid,
+      ),
       pagination: result.pagination,
     };
   }
@@ -48,7 +47,7 @@ export class PostsController {
       updatePostDto.post_id,
       updatePostDto.status,
     );
-    return this.postsService.formatPost(post);
+    return this.postsService.populatePost(post);
   }
 
   @Get('/recommend')
@@ -63,19 +62,16 @@ export class PostsController {
       req.user?.searchRadiusMeters,
     );
 
-    const formattedPosts = await Promise.all(
-      posts.map((post) => this.postsService.formatPost(post, req.user?.uuid)),
-    );
-
     return {
-      posts: formattedPosts,
+      posts: await this.postsService.populatePosts(posts, req.user?.uuid),
     };
   }
 
   @Get(':uuid')
   async getPost(@Req() req: Request, @Param('uuid') uuid: string) {
     const post = await this.postsService.getPostByUUID(uuid);
-    return this.postsService.formatPost(post, req.user?.uuid);
+
+    return this.postsService.populatePost(post, req.user?.uuid);
   }
 
   @Post()
@@ -85,7 +81,7 @@ export class PostsController {
     if (!user) throw new UnauthorizedException('You are not authenticated');
 
     const post = await this.postsService.createPost(user.uuid, createPostDto);
-    return this.postsService.formatPost(post);
+    return this.postsService.populatePost(post);
   }
 
   @Patch(':uuid')
@@ -104,7 +100,8 @@ export class PostsController {
     }
 
     const post = await this.postsService.updatePost(uuid, updatePostDto);
-    return this.postsService.formatPost(post);
+
+    return this.postsService.populatePost(post);
   }
 
   @Delete(':uuid')
