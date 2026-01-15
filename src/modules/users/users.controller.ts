@@ -47,6 +47,9 @@ export class UsersController {
     @Query() query: GetPostsQueryDto,
   ) {
     const result = await this.postsService.getPostsByAuthor(query, uuid);
+
+    console.log(result);
+
     return {
       posts: result.posts.map((post) => this.postsService.formatPost(post)),
       pagination: result.pagination,

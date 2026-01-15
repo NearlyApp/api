@@ -71,13 +71,11 @@ export class PostsRepository extends BaseRepository<typeof postsSchema> {
       query = query.where(and(...conditions));
     }
 
-    console.log('withAuthor:', withAuthor);
-
-    // if (withAuthor) {
-    //   query
-    //     .leftJoin(usersSchema, eq(postsSchema.authorUuid, usersSchema.uuid))
-    //     .as('author');
-    // }
+    if (withAuthor) {
+      query
+        .leftJoin(usersSchema, eq(postsSchema.authorUuid, usersSchema.uuid))
+        .as('author');
+    }
 
     const result = await this.withPagination(query, offset, limit);
 
