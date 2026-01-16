@@ -297,7 +297,10 @@ export class PostsService {
       where.authorUuid = not(eq(postsSchema.authorUuid, userUuid));
     }
 
-    const posts = await this.postsRepository.findMany(where);
+    const posts = await this.postsRepository.findMany(where, {
+      withAuthor: query.withAuthor,
+    });
+
     this.logger.debug(
       `[${functionName}] findMany final posts: ${Date.now() - startFinalFetch}ms (${posts.length} posts)`,
     );
