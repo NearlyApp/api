@@ -4,7 +4,7 @@ import {
   WhereClause,
 } from '@drizzle/base.repository';
 import { DrizzleService } from '@drizzle/drizzle.service';
-import { PostEntity } from '@nearlyapp/common';
+import { PostEntity, UserEntity } from '@nearlyapp/common';
 import { postsSchema, usersSchema } from '@nearlyapp/common/schemas';
 import { Injectable } from '@nestjs/common';
 import { and, eq, isNull, sql, SQLWrapper } from 'drizzle-orm';
@@ -43,7 +43,21 @@ export class PostsRepository extends BaseRepository<typeof postsSchema> {
 
     const result = await query;
 
-    return (result[0] as Optional<PostEntity<WithAuthor>>) ?? null;
+    if (!result[0]) return null;
+
+    // Transform result to nest author inside post
+    if (withAuthor) {
+      const row = result[0] as unknown as {
+        posts: PostEntity;
+        users: UserEntity;
+      };
+      return {
+        ...row.posts,
+        author: row.users,
+      } as PostEntity<WithAuthor>;
+    }
+
+    return result[0] as PostEntity<WithAuthor>;
   }
 
   /**
@@ -79,10 +93,15 @@ export class PostsRepository extends BaseRepository<typeof postsSchema> {
 
     const result = await this.withPagination(query, offset, limit);
 
-    console.log(
-      '[PostsRepository.findMany] Raw result:',
-      JSON.stringify(result, null, 2),
-    );
+    // Transform result to nest author inside post
+    if (withAuthor) {
+      return (
+        result as unknown as { posts: PostEntity; users: UserEntity }[]
+      ).map((row) => ({
+        ...row.posts,
+        author: row.users,
+      })) as PostEntity<WithAuthor>[];
+    }
 
     return result as PostEntity<WithAuthor>[];
   }
