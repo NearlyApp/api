@@ -357,13 +357,13 @@ export class PostsService {
     }
   }
 
-  async populatePost(
-    post: PostEntity,
+  async populatePost<WithAuthor extends boolean = false>(
+    post: PostEntity<WithAuthor>,
     userUuid?: Nullable<string>,
-  ): Promise<Post> {
+  ): Promise<Post<WithAuthor>> {
     const likes = await this.likesService.populatePostLike(post.uuid, userUuid);
 
-    return {
+    const data = {
       uuid: post.uuid,
       authorUuid: post.authorUuid,
       parentPostUuid: post.parentPostUuid,
@@ -377,13 +377,21 @@ export class PostsService {
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
       deletedAt: post.deletedAt,
-    };
+    } as Post<WithAuthor>;
+
+    if ('author' in post && post.author) {
+      (data as Post<true>).author = this.usersService.formatMinimalUser(
+        post.author,
+      );
+    }
+
+    return data;
   }
 
-  async populatePosts(
-    posts: PostEntity[],
+  async populatePosts<WithAuthor extends boolean = false>(
+    posts: PostEntity<WithAuthor>[],
     userUuid?: Nullable<string>,
-  ): Promise<Post[]> {
+  ): Promise<Post<WithAuthor>[]> {
     return Promise.all(posts.map((post) => this.populatePost(post, userUuid)));
   }
 }
